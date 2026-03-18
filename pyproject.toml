@@ -4,7 +4,6 @@ dynamic = ["version"]
 description = "s5n dash tools — Plotly Dash utilities"
 keywords = ["plotly", "dash", "visualization", "dashboard"]
 classifiers = [
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -19,7 +18,7 @@ authors = [
 maintainers = [
     { name = "Simon Niederberger", email = "s.niederberger@hotmail.com" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "dash",
     "plotly",
@@ -75,9 +74,12 @@ python = ".venv"
 [tool.ty.src]
 include = ["src"]
 
+[tool.mypy]
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
