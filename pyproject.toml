@@ -19,12 +19,7 @@ maintainers = [
     { name = "Simon Niederberger", email = "s.niederberger@hotmail.com" },
 ]
 requires-python = ">=3.10"
-dependencies = [
-    "dash",
-    "plotly",
-    "matplotlib",
-    "kaleido",
-]
+dependencies = ["dash", "matplotlib"]
 
 [project.urls]
 Homepage = "https://github.com/saemeon/s5ndt"
@@ -32,12 +27,7 @@ Repository = "https://github.com/saemeon/s5ndt"
 
 [dependency-groups]
 test = ["pytest", "pytest-cov"]
-doc = [
-    "mkdocs",
-    "mkdocs-material",
-    "mkdocstrings[python]",
-    "mike",
-]
+doc = ["mkdocs", "mkdocs-material", "mkdocstrings[python]", "mike"]
 dev = [
     "ruff",
     "prek",

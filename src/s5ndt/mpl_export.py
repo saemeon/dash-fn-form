@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 import base64
+import inspect
 import io
 from typing import Any, Callable
 
 import dash
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
 from dash import Input, Output, State, dcc, html
 
 from s5ndt._ids import id_generator
@@ -40,32 +40,28 @@ class FromPlotly(FromComponent):
         return _get_nested(figure, self.path)
 
 
-def make_snapshot(fig_data: dict, strip_title: bool = False):
-    """Render a Plotly figure dict to a numpy image array via kaleido.
+def make_snapshot(browser_img: str):
+    """Convert a browser-captured base64 PNG to a numpy image array.
 
     Parameters
     ----------
-    strip_title :
-        Strip the Plotly title before snapshotting so it does not appear in
-        the image (useful when matplotlib will add its own title).
+    browser_img :
+        Base64 PNG data URL from ``Plotly.toImage()`` in the browser.
 
     Returns
     -------
     numpy.ndarray
         RGBA image array suitable for ``ax.imshow()``.
     """
-    plotly_fig = go.Figure(fig_data)
-    if strip_title:
-        plotly_fig.update_layout(title_text="", margin_t=20)
-    img_bytes = plotly_fig.to_image(format="png")
-    return plt.imread(io.BytesIO(img_bytes))
+    b64 = browser_img.split(",", 1)[1]
+    return plt.imread(io.BytesIO(base64.b64decode(b64)))
 
 
-def snapshot_renderer(_fig_data: dict, title: str = ""):
+def snapshot_renderer(_fig_data: dict, title: str = "", _img_b64: str = ""):
     """Render a Plotly figure as a matplotlib snapshot.
 
-    Converts the Plotly figure to a PNG image via kaleido and displays it
-    on a plain matplotlib axes. Default renderer for :func:`mpl_export_button`.
+    Uses the browser-captured PNG — no kaleido required.
+    Default renderer for :func:`mpl_export_button`.
 
     Parameters
     ----------
@@ -73,12 +69,14 @@ def snapshot_renderer(_fig_data: dict, title: str = ""):
         Plotly figure dict (passed automatically by the export button).
     title :
         Axes title.
+    _img_b64 :
+        Browser-captured base64 PNG (passed automatically by the export button).
 
     Returns
     -------
     matplotlib.figure.Figure
     """
-    img = make_snapshot(_fig_data)
+    img = make_snapshot(_img_b64)
     fig, ax = plt.subplots()
     ax.imshow(img)
     ax.axis("off")
@@ -91,6 +89,7 @@ def mpl_export_button(
     graph_id: str,
     renderer: Callable = snapshot_renderer,
     label: str = "Export",
+    strip_title: bool = False,
 ) -> html.Div:
     """Add a matplotlib export wizard button for a dcc.Graph.
 
@@ -106,6 +105,9 @@ def mpl_export_button(
         Defaults to :func:`snapshot_renderer`.
     label :
         Label for the trigger button. Defaults to ``"Export"``.
+    strip_title :
+        Remove the Plotly figure title before capturing the browser snapshot.
+        Use when the renderer adds its own title via matplotlib.
 
     Returns
     -------
@@ -123,8 +125,10 @@ def mpl_export_button(
     restore_id = f"_s5ndt_restore_{uid}"
     menu_id = f"_s5ndt_menu_{uid}"
     autogenerate_id = f"_s5ndt_autogen_{uid}"
+    snapshot_store_id = f"_s5ndt_snapshot_{uid}"
 
     config = build_config(config_id, renderer)
+    _renderer_accepts_img = "_img_b64" in inspect.signature(renderer).parameters
 
     menu = build_dropdown(
         menu_id,
@@ -174,6 +178,7 @@ def mpl_export_button(
                 max_intervals=1,
                 disabled=True,
             ),
+            dcc.Store(id=snapshot_store_id),
         ],
     )
 
@@ -187,6 +192,48 @@ def mpl_export_button(
     config.register_populate_callback(wizard.open_input)
     config.register_restore_callback(Input(restore_id, "n_clicks"))
 
+    # Capture the browser-rendered Plotly figure as a base64 PNG.
+    # Guard: !n_intervals skips the arm_interval reset-to-0 side-effect.
+    _js_head = f"""
+        async function(n_clicks, n_intervals) {{
+            if (!n_clicks && !n_intervals) {{
+                return window.dash_clientside.no_update;
+            }}
+            const container = document.getElementById('{graph_id}');
+            if (!container) return window.dash_clientside.no_update;
+            const graphDiv = container.querySelector('.js-plotly-plot') || container;
+    """
+    if strip_title:
+        _capture_js = (
+            _js_head
+            + """
+            const layout = JSON.parse(JSON.stringify(graphDiv.layout || {}));
+            layout.title = {text: ''};
+            layout.margin = {...(layout.margin || {}), t: 20};
+            const tmp = document.createElement('div');
+            tmp.style.cssText = 'position:fixed;left:-9999px;width:'
+                + graphDiv.offsetWidth + 'px;height:' + graphDiv.offsetHeight + 'px';
+            document.body.appendChild(tmp);
+            await Plotly.newPlot(tmp, graphDiv.data, layout);
+            const img = await Plotly.toImage(tmp, {format: 'png'});
+            document.body.removeChild(tmp);
+            return img;
+        }"""
+        )
+    else:
+        _capture_js = (
+            _js_head
+            + "return await Plotly.toImage(graphDiv, {format: 'png'});\n        }"
+        )
+
+    dash.clientside_callback(
+        _capture_js,
+        Output(snapshot_store_id, "data"),
+        Input(generate_id, "n_clicks"),
+        Input(interval_id, "n_intervals"),
+        prevent_initial_call=True,
+    )
+
     @dash.callback(
         Output(interval_id, "disabled"),
         Output(interval_id, "n_intervals"),
@@ -198,45 +245,50 @@ def mpl_export_button(
 
     @dash.callback(
         Output(preview_id, "src"),
-        Input(generate_id, "n_clicks"),
-        Input(interval_id, "n_intervals"),
+        Input(snapshot_store_id, "data"),
         State(graph_id, "figure"),
         *config.states,
         prevent_initial_call=True,
     )
-    def generate_preview(n_clicks, n_intervals, _fig_data, *field_values):
+    def generate_preview(_img_b64, _fig_data, *field_values):
+        if not _img_b64:
+            return dash.no_update
         kwargs = config.build_kwargs(field_values)
+        if _renderer_accepts_img:
+            kwargs["_img_b64"] = _img_b64
         fig = renderer(_fig_data, **kwargs)
         return _fig_to_src(fig)
 
-    _config_inputs = [
-        Input(s.component_id, s.component_property) for s in config.states
-    ]
-
     @dash.callback(
         Output(preview_id, "src", allow_duplicate=True),
-        *_config_inputs,
+        *[Input(s.component_id, s.component_property) for s in config.states],
         State(autogenerate_id, "value"),
+        State(snapshot_store_id, "data"),
         State(graph_id, "figure"),
         prevent_initial_call=True,
     )
     def autogenerate_preview(*args):
-        *field_values, autogen, _fig_data = args
+        *field_values, autogen, _img_b64, _fig_data = args
         if not autogen:
             return dash.no_update
         kwargs = config.build_kwargs(tuple(field_values))
+        if _renderer_accepts_img:
+            kwargs["_img_b64"] = _img_b64 or ""
         fig = renderer(_fig_data, **kwargs)
         return _fig_to_src(fig)
 
     @dash.callback(
         Output(download_id, "data"),
         Input(f"{download_id}_btn", "n_clicks"),
+        State(snapshot_store_id, "data"),
         State(graph_id, "figure"),
         *config.states,
         prevent_initial_call=True,
     )
-    def download_figure(n_clicks, _fig_data, *field_values):
+    def download_figure(n_clicks, _img_b64, _fig_data, *field_values):
         kwargs = config.build_kwargs(field_values)
+        if _renderer_accepts_img:
+            kwargs["_img_b64"] = _img_b64 or ""
         fig = renderer(_fig_data, **kwargs)
         return dcc.send_bytes(_fig_to_bytes(fig), "figure.png")
 

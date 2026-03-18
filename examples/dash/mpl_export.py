@@ -60,16 +60,16 @@ def full_renderer(
     return fig
 
 
-# --- renderer 2: snapshot with FromPlotly title — strips plotly title,
-#     pre-fills from the live figure ---
+# --- renderer 2: browser snapshot with title overlay ---
 
 
 def snapshot_with_title(
     _fig_data,
+    _img_b64: str = "",
     title: str = FromPlotly("layout.title.text", graph),  # type: ignore[assignment]
     suptitle: str = "",
 ):
-    img = make_snapshot(_fig_data, strip_title=True)
+    img = make_snapshot(_img_b64)
     fig, ax = plt.subplots()
     ax.imshow(img)
     ax.axis("off")
@@ -96,6 +96,7 @@ app.layout = html.Div(
                     graph_id="main-graph",
                     renderer=snapshot_with_title,
                     label="Export (snapshot+title)",
+                    strip_title=True,
                 ),
                 mpl_export_button(graph_id="main-graph", label="Export (snapshot)"),
             ],
