@@ -10,7 +10,7 @@ except ImportError:
 from s5ndt._ids import id_generator
 from s5ndt.config_builder import FieldHook, FromComponent, build_config
 from s5ndt.dropdown import build_dropdown
-from s5ndt.fig_export import FromPlotly, fig_export_button
+from s5ndt.fig_export import FromPlotly, graph_exporter
 from s5ndt.wizard import Wizard, build_wizard
 
 __all__ = [
@@ -18,7 +18,7 @@ __all__ = [
     "build_config",
     "build_dropdown",
     "build_wizard",
-    "fig_export_button",
+    "graph_exporter",
     "FieldHook",
     "FromComponent",
     "FromPlotly",

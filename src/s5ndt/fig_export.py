@@ -213,10 +213,10 @@ def _build_modal_body(
     )
 
 
-def fig_export_button(
-    graph_id: str,
+def graph_exporter(
+    graph: str | dcc.Graph,
     renderer: Callable = _UNSET,
-    label: str = "Export",
+    trigger: str | Any = "Export",
     strip_title: bool = False,
     strip_legend: bool = False,
     strip_annotations: bool = False,
@@ -234,8 +234,8 @@ def fig_export_button(
 
     Parameters
     ----------
-    graph_id :
-        The ``id`` of the ``dcc.Graph`` component in the layout.
+    graph :
+        The ``dcc.Graph`` component or its string ``id``.
     renderer :
         Callable with signature
         ``(_target, [_fig_data], [_snapshot_img], **wizard_fields)``.
@@ -253,8 +253,10 @@ def fig_export_button(
         The renderer is responsible for writing to ``_target``. It may use
         any library (matplotlib, plotnine, PIL, …).
         Defaults to :func:`s5ndt.mpl.snapshot_renderer`.
-    label :
-        Label for the trigger button. Defaults to ``"Export"``.
+    trigger :
+        Either a string label (creates a plain ``html.Button``) or a custom
+        Dash component with an ``id`` attribute that responds to ``n_clicks``.
+        Defaults to ``"Export"``.
     strip_title :
         Remove the figure title before capture.
     strip_legend :
@@ -281,6 +283,7 @@ def fig_export_button(
 
         renderer = snapshot_renderer
 
+    graph_id = graph if isinstance(graph, str) else graph.id
     uid = id_generator(graph_id)
     config_id = f"_s5ndt_cfg_{uid}"
     wizard_id = f"_s5ndt_fig_{uid}"
@@ -320,7 +323,7 @@ def fig_export_button(
     )
 
     wizard = build_wizard(
-        wizard_id, body, trigger_label=label, title="Export figure", header_actions=menu
+        wizard_id, body, trigger=trigger, title="Export figure", header_actions=menu
     )
     config.register_populate_callback(wizard.open_input)
     config.register_restore_callback(Input(restore_id, "n_clicks"))

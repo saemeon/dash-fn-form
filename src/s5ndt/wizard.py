@@ -31,7 +31,7 @@ class Wizard:
 def build_wizard(
     wizard_id: str,
     body: Any,
-    trigger_label: str = "Open",
+    trigger: str | Any = "Open",
     title: str = "",
     header_actions: Any = None,
 ) -> Wizard:
@@ -43,8 +43,9 @@ def build_wizard(
         Unique namespace for component IDs.
     body :
         Any Dash component rendered inside the dialog, below the header.
-    trigger_label :
-        Label for the button that opens the wizard.
+    trigger :
+        Either a string label (creates a plain ``html.Button``) or a custom
+        Dash component with an ``id`` attribute that responds to ``n_clicks``.
     title :
         Text shown in the dialog header.
     header_actions :
@@ -58,11 +59,17 @@ def build_wizard(
         ``.open_input`` — pass to :meth:`Config.register_populate_callback`
         so hooked fields are populated when the wizard opens.
     """
-    trigger_id = f"_s5ndt_wiz_trigger_{wizard_id}"
+    default_trigger_id = f"_s5ndt_wiz_trigger_{wizard_id}"
     close_id = f"_s5ndt_wiz_close_{wizard_id}"
     store_id = f"_s5ndt_wiz_store_{wizard_id}"
     modal_id = f"_s5ndt_wiz_modal_{wizard_id}"
     open_input = Input(store_id, "data")
+
+    if isinstance(trigger, str):
+        trigger_component = html.Button(trigger, id=default_trigger_id)
+    else:
+        trigger_component = trigger
+    trigger_listen_id = trigger_component.id
 
     modal = html.Div(
         id=modal_id,
@@ -129,12 +136,12 @@ def build_wizard(
 
     @dash.callback(
         Output(store_id, "data"),
-        Input(trigger_id, "n_clicks"),
+        Input(trigger_listen_id, "n_clicks"),
         Input(close_id, "n_clicks"),
         prevent_initial_call=True,
     )
     def toggle_store(open_clicks, close_clicks):
-        return dash.ctx.triggered_id == trigger_id
+        return dash.ctx.triggered_id == trigger_listen_id
 
     @dash.callback(
         Output(modal_id, "style"),
@@ -143,7 +150,14 @@ def build_wizard(
     def update_visibility(is_open):
         return {"display": "block"} if is_open else {"display": "none"}
 
+    # When the trigger is a custom component, the user places it in the layout
+    # themselves. Return only the store + modal so there's no duplicate render.
+    children = (
+        [store, modal]
+        if not isinstance(trigger, str)
+        else [trigger_component, store, modal]
+    )
     return Wizard(
-        div=html.Div([html.Button(trigger_label, id=trigger_id), store, modal]),
+        div=html.Div(children),
         open_input=open_input,
     )

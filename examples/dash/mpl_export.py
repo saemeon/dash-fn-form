@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from dash import Dash, dcc, html
 
-from s5ndt import FromPlotly, fig_export_button
+from s5ndt import FromPlotly, graph_exporter
 
 plt.switch_backend("agg")
 
@@ -132,23 +132,23 @@ app.layout = html.Div(
             style={"display": "flex", "gap": "8px", "flexWrap": "wrap"},
             children=[
                 # 1. Default snapshot renderer — simplest usage, zero config.
-                fig_export_button(
-                    graph_id="main-graph",
-                    label="Snapshot (default)",
+                graph_exporter(
+                    graph=graph,
+                    trigger="Snapshot (default)",
                 ),
                 # 2. Custom figure-data renderer — rebuilds from raw data,
                 #    no browser capture, all wizard field types.
-                fig_export_button(
-                    graph_id="main-graph",
+                graph_exporter(
+                    graph=graph,
                     renderer=custom_renderer,
-                    label="Custom renderer",
+                    trigger="Custom renderer",
                 ),
                 # 3. Snapshot with title overlay — strip Plotly chrome before
                 #    capture; renderer redraws its own title.
-                fig_export_button(
-                    graph_id="main-graph",
+                graph_exporter(
+                    graph=graph,
                     renderer=snapshot_with_title,
-                    label="Snapshot + title overlay",
+                    trigger="Snapshot + title overlay",
                     strip_title=True,
                     strip_legend=True,
                     strip_axis_titles=True,
@@ -156,11 +156,29 @@ app.layout = html.Div(
                 ),
                 # 4. Configurable capture size — width/height/scale in the
                 #    wizard steer both Plotly.toImage and the figure layout.
-                fig_export_button(
-                    graph_id="main-graph",
+                graph_exporter(
+                    graph=graph,
                     renderer=snapshot_sized,
-                    label="Snapshot with capture params",
+                    trigger="Snapshot with capture params",
                 ),
+                # 5. Custom trigger component — placed here in the layout via
+                #    walrus; graph_exporter registers its callbacks and returns
+                #    only the hidden store + modal.
+                (
+                    custom_btn := html.Button(
+                        "Custom trigger",
+                        id="custom-export-btn",
+                        style={
+                            "backgroundColor": "#e74c3c",
+                            "color": "white",
+                            "border": "none",
+                            "padding": "8px 16px",
+                            "cursor": "pointer",
+                            "borderRadius": "4px",
+                        },
+                    )
+                ),
+                graph_exporter(graph=graph, trigger=custom_btn),
             ],
         ),
     ]
