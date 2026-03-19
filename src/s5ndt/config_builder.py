@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import inspect
 import types
 from dataclasses import dataclass, field
@@ -192,7 +193,13 @@ class Config:
 # --- public ---
 
 
-def build_config(config_id: str, fn: Callable) -> Config:
+def build_config(
+    config_id: str,
+    fn: Callable,
+    styles: dict | None = None,
+    class_names: dict | None = None,
+    component_overrides: dict | None = None,
+) -> Config:
     """Introspect *fn*'s signature and return a :class:`Config`.
 
     Parameters
@@ -204,6 +211,35 @@ def build_config(config_id: str, fn: Callable) -> Config:
         Parameters whose names start with ``_`` are skipped.
         Parameters whose default is a :class:`FieldHook` get their initial
         value populated at runtime via :meth:`Config.register_populate_callback`.
+    styles :
+        Dict mapping slot names to CSS-property dicts. Slot names correspond
+        to the field's Python annotation and the Dash component used:
+
+        * ``"str"`` → ``dcc.Input(type="text")``
+        * ``"int"`` → ``dcc.Input(type="number", step=1)``
+        * ``"float"`` → ``dcc.Input(type="number", step="any")``
+        * ``"bool"`` → ``dcc.Checklist``
+        * ``"date"`` → ``dcc.DatePickerSingle``
+        * ``"datetime"`` → ``dcc.DatePickerSingle`` + ``dcc.Input(type="text")``
+        * ``"literal"`` → ``dcc.Dropdown``
+        * ``"list"`` / ``"tuple"`` → ``dcc.Input(type="text")``
+        * ``"label"`` → ``html.Label`` applied to every field label
+    class_names :
+        Dict mapping the same slot names to CSS class name strings.
+    component_overrides :
+        Dict mapping parameter names to custom Dash components. When provided,
+        the named field uses that component as its widget instead of the
+        auto-generated one. The component's ``id`` is replaced internally;
+        the state property read back is still determined by the field's type
+        annotation (e.g. ``int`` → ``"value"``, ``date`` → ``"date"``), so the
+        override component must expose the matching property.
+
+        Example::
+
+            component_overrides={
+                "dpi": dcc.Slider(min=72, max=600, value=300),
+                "style": dcc.RadioItems(options=["solid","dashed"], value="solid"),
+            }
 
     Returns
     -------
@@ -213,11 +249,16 @@ def build_config(config_id: str, fn: Callable) -> Config:
         ``.build_kwargs(values)`` — reconstruct a ``dict`` from callback values.
         ``.register_populate_callback(open_input)`` — wire hook defaults on open.
     """
+    styles = styles or {}
+    class_names = class_names or {}
+    overrides = component_overrides or {}
     fields = _get_fields(fn)
     states = _build_states(config_id, fields)
     div = html.Div(
         style={"display": "flex", "flexDirection": "column", "gap": "8px"},
-        children=[_build_field(config_id, f) for f in fields],
+        children=[
+            _build_field(config_id, f, styles, class_names, overrides) for f in fields
+        ],
     )
     return Config(div, states, fields, config_id)
 
@@ -318,21 +359,37 @@ def _build_states(config_id: str, fields: list[_Field]) -> list[State]:
     return states
 
 
-def _build_field(config_id: str, field: _Field) -> html.Div:
+def _build_field(
+    config_id: str, field: _Field, styles: dict, class_names: dict, overrides: dict
+) -> html.Div:
     """Build a labeled input component for a single field."""
     fid = _field_id(config_id, field)
-    label = html.Label(field.name.replace("_", " ").title())
+    slot = field.type
+    label = html.Label(
+        field.name.replace("_", " ").title(),
+        style=styles.get("label"),
+        className=class_names.get("label", ""),
+    )
+
+    if field.name in overrides:
+        comp = copy.copy(overrides[field.name])
+        comp.id = fid
+        return html.Div([label, comp])
 
     if field.type == "bool":
         component = dcc.Checklist(
             id=fid,
             options=[{"label": "", "value": field.name}],
             value=[field.name] if field.default else [],
+            style=styles.get(slot),
+            className=class_names.get(slot, ""),
         )
     elif field.type == "date":
         component = dcc.DatePickerSingle(
             id=fid,
             date=field.default.isoformat() if isinstance(field.default, date) else None,
+            style=styles.get(slot),
+            className=class_names.get(slot, ""),
         )
     elif field.type == "datetime":
         default_date = (
@@ -348,14 +405,20 @@ def _build_field(config_id: str, field: _Field) -> html.Div:
         component = html.Div(
             style={"display": "flex", "gap": "8px", "alignItems": "center"},
             children=[
-                dcc.DatePickerSingle(id=fid, date=default_date),
+                dcc.DatePickerSingle(
+                    id=fid,
+                    date=default_date,
+                    style=styles.get(slot),
+                    className=class_names.get(slot, ""),
+                ),
                 dcc.Input(
                     id=_time_field_id(config_id, field),
                     type="text",
                     placeholder="HH:MM",
                     value=default_time,
                     debounce=True,
-                    style={"width": "70px"},
+                    style={"width": "70px", **(styles.get(slot) or {})},
+                    className=class_names.get(slot, ""),
                 ),
             ],
         )
@@ -366,6 +429,8 @@ def _build_field(config_id: str, field: _Field) -> html.Div:
             step=1 if field.type == "int" else "any",
             value=field.default,
             debounce=True,
+            style=styles.get(slot),
+            className=class_names.get(slot, ""),
         )
     elif field.type in ("list", "tuple"):
         if field.type == "tuple":
@@ -379,12 +444,16 @@ def _build_field(config_id: str, field: _Field) -> html.Div:
             value=", ".join(str(v) for v in field.default) if field.default else "",
             placeholder=placeholder,
             debounce=True,
+            style=styles.get(slot),
+            className=class_names.get(slot, ""),
         )
     elif field.type == "literal":
         component = dcc.Dropdown(
             id=fid,
             options=list(field.args),
             value=field.default if field.default in field.args else field.args[0],
+            style=styles.get(slot),
+            className=class_names.get(slot, ""),
         )
     else:
         component = dcc.Input(
@@ -393,6 +462,8 @@ def _build_field(config_id: str, field: _Field) -> html.Div:
             value=str(field.default) if field.default is not None else "",
             placeholder="",
             debounce=True,
+            style=styles.get(slot),
+            className=class_names.get(slot, ""),
         )
 
     return html.Div([label, component])

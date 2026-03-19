@@ -178,6 +178,8 @@ def _build_modal_body(
     preview_id: str,
     interval_id: str,
     snapshot_store_id: str,
+    styles: dict,
+    class_names: dict,
 ) -> html.Div:
     return html.Div(
         style={"display": "flex", "gap": "24px"},
@@ -191,9 +193,19 @@ def _build_modal_body(
                 },
                 children=[
                     config_div,
-                    html.Button("Generate", id=generate_id),
+                    html.Button(
+                        "Generate",
+                        id=generate_id,
+                        style=styles.get("button"),
+                        className=class_names.get("button", ""),
+                    ),
                     dcc.Download(id=download_id),
-                    html.Button("Download", id=f"{download_id}_btn"),
+                    html.Button(
+                        "Download",
+                        id=f"{download_id}_btn",
+                        style=styles.get("button"),
+                        className=class_names.get("button", ""),
+                    ),
                 ],
             ),
             html.Div(
@@ -228,6 +240,9 @@ def graph_exporter(
     strip_colorbar: bool = False,
     strip_margin: bool = False,
     filename: str = "figure.png",
+    styles: dict | None = None,
+    class_names: dict | None = None,
+    component_overrides: dict | None = None,
 ) -> html.Div:
     """Add an export wizard button for a dcc.Graph.
 
@@ -275,6 +290,30 @@ def graph_exporter(
         Zero all figure margins before capture.
     filename :
         Download filename including extension. Defaults to ``"figure.png"``.
+    styles :
+        Dict mapping slot names to CSS-property dicts. Slots:
+        ``"dialog"`` (modal container), ``"title"`` (header title),
+        ``"close"`` (✕ button), ``"button"`` (Generate/Download/Reset
+        buttons), ``"label"`` (field labels), and all Python type slots
+        (``"str"``, ``"int"``, ``"float"``, ``"bool"``, ``"date"``,
+        ``"datetime"``, ``"literal"``, ``"list"``, ``"tuple"``).
+        Example: ``{"dialog": {"borderRadius": "8px"},
+        "button": {"background": "#2563eb"}}``.
+    class_names :
+        Dict mapping the same slot names to CSS class name strings.
+    component_overrides :
+        Dict mapping renderer parameter names to custom Dash components.
+        The named field uses that component as its widget instead of the
+        auto-generated one. The component's ``id`` is replaced internally.
+        The state property read back is determined by the field's type
+        annotation, so the override component must expose the matching
+        property (e.g. ``int`` → ``"value"``, ``date`` → ``"date"``).
+
+        Example::
+
+            component_overrides={
+                "dpi": dcc.Slider(min=72, max=600, value=300),
+            }
 
     Returns
     -------
@@ -305,14 +344,24 @@ def graph_exporter(
     _has_fig_data = "_fig_data" in params
     _active_capture = [name for name in params if name.startswith("capture_")]
 
-    config = build_config(config_id, renderer)
+    _styles = styles or {}
+    _class_names = class_names or {}
+
+    config = build_config(
+        config_id, renderer, _styles, _class_names, component_overrides
+    )
 
     menu = build_dropdown(
         menu_id,
         trigger_label="···",
         close_inputs=[Input(restore_id, "n_clicks")],
         children=[
-            html.Button("Reset to defaults", id=restore_id),
+            html.Button(
+                "Reset to defaults",
+                id=restore_id,
+                style=_styles.get("button"),
+                className=_class_names.get("button", ""),
+            ),
             dcc.Checklist(
                 id=autogenerate_id,
                 options=[{"label": " Auto-generate", "value": "auto"}],
@@ -323,11 +372,26 @@ def graph_exporter(
     )
 
     body = _build_modal_body(
-        config.div, generate_id, download_id, preview_id, interval_id, snapshot_store_id
+        config.div,
+        generate_id,
+        download_id,
+        preview_id,
+        interval_id,
+        snapshot_store_id,
+        _styles,
+        _class_names,
     )
 
     wizard = build_wizard(
-        wizard_id, body, trigger=trigger, title="Export figure", header_actions=menu
+        wizard_id,
+        body,
+        trigger=trigger,
+        title="Export figure",
+        header_actions=menu,
+        dialog_style=_styles.get("dialog"),
+        dialog_class_name=_class_names.get("dialog", ""),
+        title_style=_styles.get("title"),
+        close_style=_styles.get("close"),
     )
     config.register_populate_callback(wizard.open_input)
     config.register_restore_callback(Input(restore_id, "n_clicks"))

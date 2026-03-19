@@ -28,12 +28,31 @@ class Wizard:
     open_input: Input
 
 
+_DEFAULT_DIALOG_STYLE = {
+    "position": "fixed",
+    "top": "50%",
+    "left": "50%",
+    "transform": "translate(-50%, -50%)",
+    "background": "white",
+    "padding": "24px",
+    "zIndex": 1001,
+    "display": "flex",
+    "flexDirection": "column",
+    "gap": "16px",
+    "minWidth": "600px",
+}
+
+
 def build_wizard(
     wizard_id: str,
     body: Any,
     trigger: str | Any = "Open",
     title: str = "",
     header_actions: Any = None,
+    dialog_style: dict | None = None,
+    dialog_class_name: str = "",
+    title_style: dict | None = None,
+    close_style: dict | None = None,
 ) -> Wizard:
     """Wrap *body* in a modal wizard popup.
 
@@ -51,6 +70,14 @@ def build_wizard(
     header_actions :
         Optional component(s) rendered in the header row between the title
         and the ✕ close button.
+    dialog_style :
+        CSS properties merged on top of the default dialog style. Use this
+        to override individual properties (e.g. ``{"minWidth": "800px"}``).
+        To remove the default style entirely, pass an empty dict and use
+        *dialog_class_name* instead.
+    dialog_class_name :
+        CSS class name(s) added to the dialog container, e.g. for Bootstrap
+        or Mantine users who prefer class-based styling.
 
     Returns
     -------
@@ -88,19 +115,8 @@ def build_wizard(
             ),
             # dialog
             html.Div(
-                style={
-                    "position": "fixed",
-                    "top": "50%",
-                    "left": "50%",
-                    "transform": "translate(-50%, -50%)",
-                    "background": "white",
-                    "padding": "24px",
-                    "zIndex": 1001,
-                    "display": "flex",
-                    "flexDirection": "column",
-                    "gap": "16px",
-                    "minWidth": "600px",
-                },
+                style={**_DEFAULT_DIALOG_STYLE, **(dialog_style or {})},
+                className=dialog_class_name,
                 children=[
                     html.Div(
                         style={
@@ -109,7 +125,7 @@ def build_wizard(
                             "alignItems": "center",
                         },
                         children=[
-                            html.Strong(title),
+                            html.Strong(title, style=title_style),
                             html.Div(
                                 style={
                                     "display": "flex",
@@ -122,7 +138,7 @@ def build_wizard(
                                         if header_actions is not None
                                         else []
                                     ),
-                                    html.Button("✕", id=close_id),
+                                    html.Button("✕", id=close_id, style=close_style),
                                 ],
                             ),
                         ],

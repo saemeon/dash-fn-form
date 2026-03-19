@@ -27,9 +27,9 @@ graph = dcc.Graph(
 
 
 # --- renderer: full custom (figure data, all wizard field types) ---
-# Demonstrates: figure-data renderer (no browser capture), FromPlotly defaults,
-# all supported wizard field types (str, int, float, bool, date, datetime,
-# Literal, list, tuple).
+# Demonstrates: _fig_data renderer (no browser capture), FromPlotly defaults,
+# all supported field types (str, int, float, bool, date, datetime, Literal,
+# list, tuple), filename, styles/class_names.
 
 
 def custom_renderer(
@@ -71,8 +71,7 @@ def custom_renderer(
 
 
 # --- renderer: snapshot with matplotlib title overlay ---
-# Demonstrates: _snapshot_img renderer, strip_title, FromPlotly default,
-# capture_scale as wizard field forwarded to Plotly.toImage.
+# Demonstrates: _snapshot_img, strip_*, capture_scale forwarded to Plotly.toImage.
 
 
 def snapshot_with_title(
@@ -98,9 +97,8 @@ def snapshot_with_title(
         plt.close(fig)
 
 
-# --- renderer: custom snapshot with configurable capture dimensions ---
-# Demonstrates: capture_width/height/scale as wizard fields forwarded to
-# Plotly.toImage.
+# --- renderer: configurable capture dimensions ---
+# Demonstrates: capture_width/height/scale forwarded to Plotly.toImage.
 
 
 def snapshot_sized(
@@ -123,6 +121,28 @@ def snapshot_sized(
         plt.close(fig)
 
 
+# --- renderer: component_overrides demo ---
+# Demonstrates: multiple overrides — dcc.Slider for dpi, dcc.RadioItems for
+# capture_scale. Renderer stays plain Python; widgets wired at the call site.
+
+
+def snapshot_with_overrides(
+    _target,
+    _snapshot_img,
+    dpi: int = 300,
+    capture_scale: int = 2,
+):
+    img = plt.imread(io.BytesIO(_snapshot_img()))
+    h, w = img.shape[:2]
+    fig, ax = plt.subplots(figsize=(w / dpi, h / dpi), dpi=dpi)
+    try:
+        ax.imshow(img)
+        ax.axis("off")
+        fig.savefig(_target, format="png", bbox_inches="tight", pad_inches=0)
+    finally:
+        plt.close(fig)
+
+
 # --- layout ---
 
 app.layout = html.Div(
@@ -136,34 +156,130 @@ app.layout = html.Div(
                     graph=graph,
                     trigger="Snapshot (default)",
                 ),
-                # 2. Custom figure-data renderer — rebuilds from raw data,
-                #    no browser capture, all wizard field types.
+                # 2. Custom figure-data renderer — all field types, FromPlotly,
+                #    custom filename, narrowed number inputs via styles.
                 graph_exporter(
                     graph=graph,
                     renderer=custom_renderer,
                     trigger="Custom renderer",
+                    filename="scatter.png",
+                    styles={"int": {"width": "70px"}, "float": {"width": "70px"}},
                 ),
-                # 3. Snapshot with title overlay — strip Plotly chrome before
-                #    capture; renderer redraws its own title.
+                # 3. Snapshot + title overlay — strip all Plotly chrome before
+                #    capture (title, legend, annotations, axis titles, margin,
+                #    colorbar); renderer redraws its own title.
                 graph_exporter(
                     graph=graph,
                     renderer=snapshot_with_title,
-                    trigger="Snapshot + title overlay",
+                    trigger="Snapshot + overlay",
                     strip_title=True,
                     strip_legend=True,
+                    strip_annotations=True,
                     strip_axis_titles=True,
+                    strip_colorbar=True,
                     strip_margin=True,
                 ),
-                # 4. Configurable capture size — width/height/scale in the
-                #    wizard steer both Plotly.toImage and the figure layout.
+                # 4. Configurable capture size — capture_width/height/scale
+                #    forwarded to Plotly.toImage, wider dialog via styles.
                 graph_exporter(
                     graph=graph,
                     renderer=snapshot_sized,
-                    trigger="Snapshot with capture params",
+                    trigger="Capture params",
+                    styles={"dialog": {"minWidth": "700px"}},
                 ),
-                # 5. Custom trigger component — placed here in the layout via
-                #    walrus; graph_exporter registers its callbacks and returns
-                #    only the hidden store + modal.
+                # 5. Component overrides — dcc.Slider for dpi, dcc.RadioItems
+                #    for capture_scale; renderer is plain Python.
+                graph_exporter(
+                    graph=graph,
+                    renderer=snapshot_with_overrides,
+                    trigger="Component overrides",
+                    component_overrides={
+                        "dpi": dcc.Slider(
+                            min=72,
+                            max=600,
+                            step=None,
+                            marks={72: "72", 150: "150", 300: "300", 600: "600"},
+                            value=300,
+                            tooltip={"placement": "bottom", "always_visible": True},
+                        ),
+                        "capture_scale": dcc.RadioItems(
+                            options=[
+                                {"label": f" {v}×", "value": v} for v in [1, 2, 3, 4]
+                            ],
+                            value=2,
+                            inline=True,
+                        ),
+                    },
+                ),
+                # 6. Styled wizard — dialog, title, close, buttons, labels, and
+                #    field inputs all styled via the styles dict.
+                graph_exporter(
+                    graph=graph,
+                    renderer=custom_renderer,
+                    trigger="Styled wizard",
+                    styles={
+                        "dialog": {
+                            "borderRadius": "12px",
+                            "boxShadow": "0 8px 40px rgba(0,0,0,0.2)",
+                            "background": "#1e1e2e",
+                            "color": "#cdd6f4",
+                        },
+                        "title": {
+                            "fontSize": "16px",
+                            "fontWeight": "700",
+                            "color": "#cba6f7",
+                        },
+                        "close": {
+                            "background": "transparent",
+                            "border": "none",
+                            "color": "#6c7086",
+                            "fontSize": "16px",
+                            "cursor": "pointer",
+                        },
+                        "button": {
+                            "background": "#cba6f7",
+                            "color": "#1e1e2e",
+                            "border": "none",
+                            "padding": "6px 14px",
+                            "borderRadius": "6px",
+                            "fontWeight": "600",
+                            "cursor": "pointer",
+                        },
+                        "label": {
+                            "fontSize": "11px",
+                            "fontWeight": "600",
+                            "textTransform": "uppercase",
+                            "letterSpacing": "0.06em",
+                            "color": "#a6adc8",
+                        },
+                        "str": {
+                            "background": "#313244",
+                            "border": "1px solid #45475a",
+                            "borderRadius": "4px",
+                            "color": "#cdd6f4",
+                            "padding": "3px 6px",
+                        },
+                        "int": {
+                            "width": "70px",
+                            "background": "#313244",
+                            "border": "1px solid #45475a",
+                            "borderRadius": "4px",
+                            "color": "#cdd6f4",
+                            "padding": "3px 6px",
+                        },
+                        "float": {
+                            "width": "70px",
+                            "background": "#313244",
+                            "border": "1px solid #45475a",
+                            "borderRadius": "4px",
+                            "color": "#cdd6f4",
+                            "padding": "3px 6px",
+                        },
+                        "literal": {"background": "#313244", "color": "#cdd6f4"},
+                    },
+                ),
+                # 7. Custom trigger component — placed here via walrus operator;
+                #    graph_exporter returns only the hidden store + modal.
                 (
                     custom_btn := html.Button(
                         "Custom trigger",
