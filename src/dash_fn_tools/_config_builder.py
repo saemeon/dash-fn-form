@@ -162,9 +162,7 @@ class Config:
     def build_kwargs(self, values: tuple) -> dict:
         return _build_kwargs(self._fields, values)
 
-    def build_kwargs_validated(
-        self, values: tuple
-    ) -> tuple[dict, dict[str, str]]:
+    def build_kwargs_validated(self, values: tuple) -> tuple[dict, dict[str, str]]:
         """Like :meth:`build_kwargs` but also validates each field.
 
         Returns ``(kwargs, errors)`` where ``errors`` maps field names to
@@ -210,9 +208,17 @@ class Config:
             else:
                 raw = next(it)
                 err = _validate(f, raw)
+                coerced = _coerce(f, raw)
                 if err:
                     errors[f.name] = err
-                kwargs[f.name] = _coerce(f, raw)
+                elif f.spec and f.spec.validator is not None:
+                    try:
+                        custom_err = f.spec.validator(coerced)
+                    except Exception as exc:
+                        custom_err = str(exc)
+                    if custom_err:
+                        errors[f.name] = custom_err
+                kwargs[f.name] = coerced
         return kwargs, errors
 
     @property
@@ -224,12 +230,13 @@ class Config:
         your normal outputs.  Pair with :meth:`invalid_outputs` to compute
         the return values.
 
-        Only covers fields whose component is ``dcc.Input`` (types: ``str``,
-        ``int``, ``float``, ``list``, ``tuple``, ``path``).
+        Covers fields with built-in type validation (``str``, ``int``, ``float``,
+        ``list``, ``tuple``, ``path``) and any field with a custom
+        ``FieldSpec(validator=...)``.
         """
         result = []
         for f in self._fields:
-            if not (f.spec and f.spec.component) and f.type in _VALIDATABLE:
+            if _has_error_span(f):
                 err_id = f"_dft_err_{self._config_id}_{f.name}"
                 result.append(Output(err_id, "children", allow_duplicate=True))
                 result.append(Output(err_id, "style", allow_duplicate=True))
@@ -244,7 +251,7 @@ class Config:
         """
         result = []
         for f in self._fields:
-            if not (f.spec and f.spec.component) and f.type in _VALIDATABLE:
+            if _has_error_span(f):
                 msg = errors.get(f.name, "")
                 result.append(msg)
                 result.append(
@@ -459,7 +466,7 @@ def build_config(
         Unique namespace for component IDs.
     fn :
         Callable whose parameters define the fields.
-        Parameters whose names start with ``_`` are skipped.
+        Parameters whose names match a reserved ``build_config`` kwarg are skipped.
     **kwargs :
         Per-field customisation passed as keyword arguments named after the
         function parameter.  Values may be a :class:`FieldSpec`, a bare
@@ -471,7 +478,9 @@ def build_config(
 
         Example::
 
-            cfg = build_config("render", fn, dpi=(10, 300, 10), show_grid=FieldSpec(label="Grid"))
+            cfg = build_config(
+                "render", fn, dpi=(10, 300, 10), show_grid=FieldSpec(label="Grid")
+            )
 
         Overridden by ``Annotated[T, FieldSpec(...)]`` in the signature.
         Use ``_field_specs`` when you need to build the dict programmatically.
@@ -542,6 +551,8 @@ def build_config(
                     f"build_config kwarg {name!r}: tuple must be (min, max) or "
                     f"(min, max, step), got {val!r}"
                 )
+        elif callable(val) and not isinstance(val, (FieldSpec, FieldHook)):
+            normalized[name] = FieldSpec(validator=val)
         else:
             normalized[name] = val
     external_specs = {**normalized, **(_field_specs or {})}
@@ -708,7 +719,7 @@ def _get_fields(
 
     fields = []
     for param in inspect.signature(fn).parameters.values():
-        if param.name.startswith("_"):
+        if param.name in _RESERVED:
             continue
         if param.name in exclude_set:
             continue
@@ -728,7 +739,7 @@ def _get_fields(
 
         annotation = hints.get(param.name, param.annotation)
 
-        # Extract FieldSpec from Annotated[T, FieldSpec(...)]
+        # Extract FieldSpec (and bare callable validators) from Annotated[T, ...]
         annotated_spec: FieldSpec | None = None
         if get_origin(annotation) is Annotated:
             inner_args = get_args(annotation)
@@ -736,6 +747,21 @@ def _get_fields(
             annotated_spec = next(
                 (m for m in inner_args[1:] if isinstance(m, FieldSpec)), None
             )
+            # A bare callable in Annotated metadata becomes the validator
+            bare_validator = next(
+                (
+                    m
+                    for m in inner_args[1:]
+                    if callable(m) and not isinstance(m, FieldSpec)
+                ),
+                None,
+            )
+            if bare_validator is not None:
+                if annotated_spec is None:
+                    annotated_spec = FieldSpec(validator=bare_validator)
+                elif annotated_spec.validator is None:
+                    annotated_spec = copy.copy(annotated_spec)
+                    annotated_spec.validator = bare_validator
 
         # Legacy hook-as-default: fold into annotated_spec so _resolve_spec sees it
         if hook_from_default is not None and annotated_spec is None:
@@ -760,8 +786,28 @@ def _get_fields(
     return fields
 
 
-# Field types whose primary component is dcc.Input and supports the `invalid` prop.
+# Field types with built-in coercion validation.
 _VALIDATABLE = frozenset({"str", "int", "float", "list", "tuple", "path"})
+
+# build_config kwargs that must not appear as field names.
+_RESERVED = frozenset(
+    {
+        "_field_specs",
+        "_styles",
+        "_class_names",
+        "_cols",
+        "_show_docstring",
+        "_exclude",
+        "_include",
+    }
+)
+
+
+def _has_error_span(f: _Field) -> bool:
+    """True if this field should have an error span rendered."""
+    if f.spec and f.spec.component:
+        return False  # custom component — caller manages errors
+    return f.type in _VALIDATABLE or bool(f.spec and f.spec.validator)
 
 
 def _validate(f: _Field, value: Any) -> str | None:
@@ -854,7 +900,7 @@ def _build_field(
         children.append(
             html.Small(spec.description, style={"color": "#666", "display": "block"})
         )
-    if f.type in _VALIDATABLE:
+    if _has_error_span(f):
         children.append(
             html.Small(
                 "",

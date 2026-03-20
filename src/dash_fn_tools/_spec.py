@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -116,3 +117,21 @@ class FieldSpec:
     # --- interactivity ---
     visible: tuple | None = None
     """Conditional visibility rule: ``("other_field", "==", value)``."""
+
+    # --- validation ---
+    validator: Callable[[Any], str | None] | None = None
+    """Custom validator called with the *coerced* value after type checking.
+
+    Return a human-readable error string on failure, ``None`` on success.
+
+    Example::
+
+        FieldSpec(validator=lambda v: "Must be positive" if v <= 0 else None)
+        FieldSpec(validator=lambda v: None if "@" in v else "Not a valid email")
+
+    Can also be supplied as a bare callable in ``Annotated`` metadata::
+
+        def positive(v): return "Must be > 0" if v <= 0 else None
+
+        def fn(dpi: Annotated[int, positive] = 150): ...
+    """
