@@ -71,6 +71,64 @@ class Config:
         """
         return [State(f"_dft_dirty_{self._config_id}", "data")]
 
+    def register_visibility_callbacks(self) -> None:
+        """Register a clientside callback that shows/hides conditional fields.
+
+        Fields with ``FieldSpec(visible=("other_field", op, value))`` are
+        wrapped in a div whose ``display`` style is toggled whenever the
+        controlling field changes.  Supported operators: ``==``, ``!=``,
+        ``"in"``, ``"not in"``.
+
+        No arguments needed — call once after ``build_config``.
+        """
+        visible_fields = [f for f in self._fields if f.spec and f.spec.visible]
+        if not visible_fields:
+            return
+
+        # Map each field name to its index in self.states (datetime uses two)
+        field_to_idx: dict[str, int] = {}
+        idx = 0
+        for f in self._fields:
+            field_to_idx[f.name] = idx
+            idx += 2 if f.type == "datetime" else 1
+
+        inputs = [Input(s.component_id, s.component_property) for s in self.states]
+        outputs = [
+            Output(f"_dft_vis_{self._config_id}_{f.name}", "style")
+            for f in visible_fields
+        ]
+        conditions = [
+            {
+                "idx": field_to_idx.get(f.spec.visible[0], 0),  # type: ignore[index]
+                "op": f.spec.visible[1],  # type: ignore[index]
+                "val": f.spec.visible[2],  # type: ignore[index]
+            }
+            for f in visible_fields
+        ]
+        conditions_js = json.dumps(conditions)
+
+        dash.clientside_callback(
+            f"""
+            function() {{
+                var args = Array.from(arguments);
+                var conditions = {conditions_js};
+                return conditions.map(function(cond) {{
+                    var raw = args[cond.idx];
+                    var value = Array.isArray(raw) ? raw.length > 0 : raw;
+                    var show;
+                    if (cond.op === '==') show = value == cond.val;
+                    else if (cond.op === '!=') show = value != cond.val;
+                    else if (cond.op === 'in') show = Array.isArray(cond.val) && cond.val.includes(value);
+                    else if (cond.op === 'not in') show = !Array.isArray(cond.val) || !cond.val.includes(value);
+                    else show = true;
+                    return show ? {{}} : {{"display": "none"}};
+                }});
+            }}
+            """,
+            outputs,
+            inputs,
+        )
+
     def register_dirty_tracking(self) -> None:
         """Register a clientside callback that records touched fields.
 
@@ -389,9 +447,22 @@ def build_config(
                 )
             )
 
-    children += [
-        _build_field(config_id, f, label_style, label_class_name) for f in fields
-    ]
+    field_defaults = {f.name: f.default for f in fields}
+    for f in fields:
+        child = _build_field(config_id, f, label_style, label_class_name)
+        if f.spec and f.spec.visible:
+            other, op, val = f.spec.visible
+            show = _check_visible(field_defaults.get(other), op, val)
+            grid: dict = (
+                {"gridColumn": f"span {f.spec.col_span}"} if f.spec.col_span > 1 else {}
+            )
+            vis_style = {**grid, **({} if show else {"display": "none"})}
+            child = html.Div(
+                child,
+                id=f"_dft_vis_{config_id}_{f.name}",
+                style=vis_style or None,
+            )
+        children.append(child)
 
     if cols > 1:
         outer_style: dict = {
@@ -563,6 +634,19 @@ def _get_fields(
         fields.sort(key=lambda f: order.get(f.name, len(include)))
 
     return fields
+
+
+def _check_visible(value: Any, op: str, expected: Any) -> bool:
+    """Evaluate a single visibility condition at render time (Python side)."""
+    if op == "==":
+        return value == expected
+    if op == "!=":
+        return value != expected
+    if op == "in":
+        return value in expected
+    if op == "not in":
+        return value not in expected
+    return True
 
 
 def _build_states(config_id: str, fields: list[_Field]) -> list[State]:
