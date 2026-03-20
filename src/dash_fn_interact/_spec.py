@@ -114,6 +114,19 @@ class FieldSpec:
     hook: FieldHook | None = None
     """Runtime hook that derives the field's default from Dash state."""
 
+    # --- input behaviour ---
+    debounce: bool | None = None
+    """Control debounce on ``dcc.Input`` / ``dcc.Textarea`` fields.
+
+    * ``None`` (default) — use the type default (``True`` for all text and
+      number inputs).
+    * ``False`` — update on every keystroke (useful for live search/filter).
+    * ``True`` — force debounce even if the type default would be ``False``.
+
+    Has no effect on ``bool``, ``date``, ``datetime``, ``literal``, or
+    ``enum`` fields, which don't use debounce.
+    """
+
     # --- interactivity ---
     visible: tuple | None = None
     """Conditional visibility rule: ``("other_field", "==", value)``."""

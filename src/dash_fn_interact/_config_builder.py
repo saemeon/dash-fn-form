@@ -512,17 +512,26 @@ def build_config(
         Parameters whose names match a reserved ``build_config`` kwarg are skipped.
     **kwargs :
         Per-field customisation passed as keyword arguments named after the
-        function parameter.  Values may be a :class:`FieldSpec`, a bare
-        :class:`FieldHook` (treated as ``FieldSpec(hook=hook)``), or a tuple
-        shorthand:
+        function parameter.  Supported shorthand values:
 
+        * ``FieldSpec(...)`` / ``FieldHook`` — passed through as-is
         * ``(min, max)`` → ``FieldSpec(min=min, max=max)``
         * ``(min, max, step)`` → ``FieldSpec(min=min, max=max, step=step)``
+        * ``range(a, b, step)`` → ``FieldSpec(min=a, max=b, step=step)``
+        * ``["a", "b", "c"]`` → ``dcc.Dropdown(options=[...])``
+        * ``{"Label": "value", ...}`` → ``dcc.Dropdown`` with label/value pairs
+        * ``"My Label"`` → ``FieldSpec(label="My Label")``
+        * ``dcc.Component`` → ``FieldSpec(component=component)``
+        * ``callable`` → ``FieldSpec(validator=callable)``
 
         Example::
 
             cfg = build_config(
-                "render", fn, dpi=(10, 300, 10), show_grid=FieldSpec(label="Grid")
+                "render", fn,
+                dpi=range(72, 300, 1),
+                method={"Newton": "newton", "Euler": "euler"},
+                title="Chart title",
+                score=lambda v: "Must be 0–1" if not 0 <= v <= 1 else None,
             )
 
         Overridden by ``Annotated[T, FieldSpec(...)]`` in the signature.
@@ -580,11 +589,17 @@ def build_config(
     styles = _styles or {}
     class_names = _class_names or {}
 
-    # Normalize **kwargs tuple shorthands and merge with _field_specs.
+    # Normalize **kwargs shorthands and merge with _field_specs.
     # _field_specs wins over **kwargs for the same field name.
     normalized: dict[str, FieldSpec | FieldHook] = {}
     for name, val in kwargs.items():
-        if isinstance(val, tuple):
+        if isinstance(val, FieldSpec) or isinstance(val, FieldHook):
+            normalized[name] = val
+        elif isinstance(val, range):
+            # range(start, stop, step) → FieldSpec(min, max, step)
+            normalized[name] = FieldSpec(min=val.start, max=val.stop, step=val.step)
+        elif isinstance(val, tuple):
+            # (min, max) or (min, max, step)
             if len(val) == 2:
                 normalized[name] = FieldSpec(min=val[0], max=val[1])
             elif len(val) == 3:
@@ -594,7 +609,27 @@ def build_config(
                     f"build_config kwarg {name!r}: tuple must be (min, max) or "
                     f"(min, max, step), got {val!r}"
                 )
-        elif callable(val) and not isinstance(val, (FieldSpec, FieldHook)):
+        elif isinstance(val, list):
+            # list → Dropdown with those options
+            normalized[name] = FieldSpec(
+                component=dcc.Dropdown(options=val, value=val[0] if val else None)
+            )
+        elif isinstance(val, dict):
+            # dict → Dropdown with label/value pairs
+            options = [{"label": k, "value": v} for k, v in val.items()]
+            normalized[name] = FieldSpec(
+                component=dcc.Dropdown(
+                    options=options, value=options[0]["value"] if options else None
+                )
+            )
+        elif isinstance(val, str):
+            # plain string → label override
+            normalized[name] = FieldSpec(label=val)
+        elif hasattr(val, "id") or hasattr(val, "_type"):
+            # Dash component → component override
+            normalized[name] = FieldSpec(component=val)
+        elif callable(val):
+            # bare callable → validator
             normalized[name] = FieldSpec(validator=val)
         else:
             normalized[name] = val
@@ -979,6 +1014,11 @@ def _build_field(
     return html.Div(children, style=wrapper_style or None)
 
 
+def _debounce(spec: FieldSpec) -> bool:
+    """Resolve effective debounce setting for a field (default: True)."""
+    return True if spec.debounce is None else spec.debounce
+
+
 def _make_component(config_id: str, f: _Field, spec: FieldSpec, fid: str) -> Any:
     """Build the Dash input component for a field based on its type."""
     if f.type == "bool":
@@ -1017,7 +1057,7 @@ def _make_component(config_id: str, f: _Field, spec: FieldSpec, fid: str) -> Any
                     type="text",
                     placeholder="HH:MM",
                     value=default_time,
-                    debounce=True,
+                    debounce=_debounce(spec),
                     style={"width": "70px", **(spec.style or {})},
                     className=spec.class_name,
                 ),
@@ -1034,7 +1074,7 @@ def _make_component(config_id: str, f: _Field, spec: FieldSpec, fid: str) -> Any
             value=f.default,
             min=spec.min,
             max=spec.max,
-            debounce=True,
+            debounce=_debounce(spec),
             style=spec.style,
             className=spec.class_name,
         )
@@ -1049,7 +1089,7 @@ def _make_component(config_id: str, f: _Field, spec: FieldSpec, fid: str) -> Any
             type="text",
             value=", ".join(str(v) for v in f.default) if f.default else "",
             placeholder=placeholder,
-            debounce=True,
+            debounce=_debounce(spec),
             style=spec.style,
             className=spec.class_name,
         )
@@ -1089,7 +1129,7 @@ def _make_component(config_id: str, f: _Field, spec: FieldSpec, fid: str) -> Any
             type="text",
             value=str(f.default) if f.default is not None else "",
             placeholder="/path/to/file",
-            debounce=True,
+            debounce=_debounce(spec),
             style=spec.style,
             className=spec.class_name,
         )
@@ -1098,7 +1138,7 @@ def _make_component(config_id: str, f: _Field, spec: FieldSpec, fid: str) -> Any
         type="text",
         value=str(f.default) if f.default is not None else "",
         placeholder="",
-        debounce=True,
+        debounce=_debounce(spec),
         style=spec.style,
         className=spec.class_name,
     )
