@@ -60,6 +60,47 @@ class Config:
         self._fields = fields
         self._config_id = config_id
 
+    @property
+    def dirty_states(self) -> list[State]:
+        """A single ``State`` for the dirty-tracking store.
+
+        Pass to a callback alongside :attr:`states` to know which fields the
+        user has touched.  The store value is a dict keyed by component ID
+        (use :func:`field_id` to look up a specific field).
+        Requires :meth:`register_dirty_tracking` to have been called.
+        """
+        return [State(f"_dft_dirty_{self._config_id}", "data")]
+
+    def register_dirty_tracking(self) -> None:
+        """Register a clientside callback that records touched fields.
+
+        Writes ``{component_id: 1}`` into a ``dcc.Store`` on every field
+        change.  Already-dirty fields are preserved — the store accumulates.
+        Read it via :attr:`dirty_states`.
+        """
+        store_id = f"_dft_dirty_{self._config_id}"
+        inputs = [Input(s.component_id, s.component_property) for s in self.states]
+        dash.clientside_callback(
+            """
+            function() {
+                var triggered = dash_clientside.callback_context.triggered;
+                if (!triggered || triggered.length === 0) {
+                    return dash_clientside.no_update;
+                }
+                var current = arguments[arguments.length - 1] || {};
+                var dirty = Object.assign({}, current);
+                triggered.forEach(function(t) {
+                    dirty[t.prop_id.split('.')[0]] = 1;
+                });
+                return dirty;
+            }
+            """,
+            Output(store_id, "data", allow_duplicate=True),
+            inputs,
+            State(store_id, "data"),
+            prevent_initial_call=True,
+        )
+
     def build_kwargs(self, values: tuple) -> dict:
         return _build_kwargs(self._fields, values)
 
@@ -361,7 +402,12 @@ def build_config(
     else:
         outer_style = {"display": "flex", "flexDirection": "column", "gap": "8px"}
 
-    div = html.Div(style=outer_style, children=children)
+    div = html.Div(
+        children=[
+            dcc.Store(id=f"_dft_dirty_{config_id}", data={}),
+            html.Div(style=outer_style, children=children),
+        ]
+    )
     return Config(div, states, fields, config_id)
 
 
@@ -674,7 +720,6 @@ def _make_component(config_id: str, f: _Field, spec: FieldSpec, fid: str) -> Any
             id=fid,
             value=default_str,
             placeholder='{"key": "value"}',
-            debounce=True,
             style={"fontFamily": "monospace", "width": "100%", **(spec.style or {})},
             className=spec.class_name,
         )
