@@ -183,14 +183,18 @@ class Form(html.Div):
         _validator: Callable[[dict], str | None] | None = None,
         _field_components: Any = None,
         _description: str | None = None,
+        _replace: bool = False,
     ):
         if config_id in _registered_config_ids:
-            warnings.warn(
-                f"dash-fn-interact: config_id {config_id!r} is already in use. "
-                "Duplicate IDs will cause Dash callback errors.",
-                UserWarning,
-                stacklevel=2,
-            )
+            if not _replace:
+                warnings.warn(
+                    f"dash-fn-interact: config_id {config_id!r} is already in use. "
+                    "Duplicate IDs will cause Dash callback errors. "
+                    "Pass _replace=True to suppress this warning.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            _registered_config_ids.discard(config_id)
         _registered_config_ids.add(config_id)
 
         styles = _styles or {}
@@ -432,6 +436,18 @@ class Form(html.Div):
         result = _build_kwargs(self._fields, values)
         result.update(self._fixed_values)
         return result
+
+    def build_object(self, values: tuple, cls: type) -> Any:
+        """Coerce *values* and construct an instance of *cls*.
+
+        Equivalent to ``cls(**self.build_kwargs(values))``.  Useful for
+        declarative :class:`Form` subclasses where there is no wrapped function::
+
+            @app.callback(Input("apply", "n_clicks"), *cfg.states)
+            def on_apply(n, *values):
+                settings = cfg.build_object(values, Settings)
+        """
+        return cls(**self.build_kwargs(values))
 
     def _named_to_values(self, raw: dict[str, Any]) -> tuple:
         """Convert a name→raw-value dict (from :attr:`named_states`) to a positional tuple.
@@ -876,6 +892,7 @@ class FnForm(Form):
         _initial_values: dict | object | None = None,
         _validator: Callable[[dict], str | None] | None = None,
         _field_components: Any = None,
+        _replace: bool = False,
         **kwargs: Field | FieldHook | tuple,
     ):
         styles = _styles or {}
@@ -949,6 +966,7 @@ class FnForm(Form):
             _validator=_validator,
             _field_components=_field_components,
             _description=description,
+            _replace=_replace,
         )
         object.__setattr__(self, "_fn", fn)
 
