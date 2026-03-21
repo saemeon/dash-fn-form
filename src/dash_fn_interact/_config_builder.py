@@ -27,7 +27,7 @@ from typing import (
 import dash
 from dash import Input, Output, State, dcc, html
 
-from dash_fn_interact._spec import Field, FieldHook
+from dash_fn_interact._spec import Field, FieldHook, _FieldFixed
 
 _registered_config_ids: set[str] = set()
 
@@ -111,11 +111,13 @@ class Config(html.Div):
         states: list[State],
         fields: list[_Field],
         config_id: str,
+        fixed_values: dict | None = None,
     ):
         super().__init__(children=children)
         object.__setattr__(self, "states", states)
         object.__setattr__(self, "_fields", fields)
         object.__setattr__(self, "_config_id", config_id)
+        object.__setattr__(self, "_fixed_values", fixed_values or {})
 
     @property
     def dirty_states(self) -> list[State]:
@@ -237,7 +239,9 @@ class Config(html.Div):
         raise AttributeError(f"Config has no field {name!r}")
 
     def build_kwargs(self, values: tuple) -> dict:
-        return _build_kwargs(self._fields, values)
+        result = _build_kwargs(self._fields, values)
+        result.update(self._fixed_values)
+        return result
 
     def build_kwargs_validated(self, values: tuple) -> tuple[dict, dict[str, str]]:
         """Like :meth:`build_kwargs` but also validates each field.
@@ -296,6 +300,7 @@ class Config(html.Div):
                     if custom_err:
                         errors[f.name] = custom_err
                 kwargs[f.name] = coerced
+        kwargs.update(self._fixed_values)
         return kwargs, errors
 
     @property
@@ -611,8 +616,13 @@ def build_config(
 
     # Normalize **kwargs shorthands and merge with _field_specs.
     # _field_specs wins over **kwargs for the same field name.
+    # _FieldFixed values are collected separately — not rendered, injected in build_kwargs.
+    fixed_values: dict[str, Any] = {}
     normalized: dict[str, Field | FieldHook] = {}
     for name, val in kwargs.items():
+        if isinstance(val, _FieldFixed):
+            fixed_values[name] = val.value
+            continue
         if isinstance(val, Field) or isinstance(val, FieldHook):
             normalized[name] = val
         elif isinstance(val, range):
@@ -656,6 +666,8 @@ def build_config(
     external_specs = {**normalized, **(_field_specs or {})}
 
     fields = _get_fields(fn, exclude=_exclude, include=_include)
+    if fixed_values:
+        fields = [f for f in fields if f.name not in fixed_values]
 
     if _initial_values is not None:
         for f in fields:
@@ -722,6 +734,7 @@ def build_config(
         states,
         fields,
         config_id,
+        fixed_values or None,
     )
 
 

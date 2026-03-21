@@ -1,7 +1,7 @@
 # Copyright (c) Simon Niederberger.
 # Distributed under the terms of the MIT License.
 
-"""Public types: FieldHook, FromComponent, Field."""
+"""Public types: FieldHook, FromComponent, Field, fixed."""
 
 from __future__ import annotations
 
@@ -57,6 +57,32 @@ class FromComponent(FieldHook):
 
     def get_default(self, *state_values: Any) -> Any:
         return state_values[0] if state_values else None
+
+
+# --- fixed ---
+
+
+class _FieldFixed:
+    """Sentinel returned by :func:`fixed`. Internal — use ``fixed()`` instead."""
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+
+def fixed(value: Any) -> _FieldFixed:
+    """Pass a constant to the function without rendering a UI control.
+
+    Analogous to ``ipywidgets.fixed()``.  The field is hidden from the form
+    but its value is always injected by :meth:`~dash_fn_interact.Config.build_kwargs`.
+
+    Example::
+
+        cfg = build_config("render", fn, fig=fixed(current_figure))
+        # "fig" has no widget; build_kwargs always returns {"fig": current_figure, ...}
+
+        panel = interact(fn, context=fixed(some_value))
+    """
+    return _FieldFixed(value)
 
 
 # --- Field ---
