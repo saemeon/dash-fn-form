@@ -115,7 +115,7 @@ def interactive_output(
     *,
     _loading: bool = True,
     _render: Callable[[Any], Any] | None = None,
-) -> html.Div:
+) -> dcc.Loading | html.Div:
     """Build a decoupled output area wired to an existing :class:`~dash_fn_interact.FnForm`.
 
     Mirrors ipywidgets ``interactive_output()`` — you supply the form (already

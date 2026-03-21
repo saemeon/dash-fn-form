@@ -19,10 +19,10 @@ Import as a module for a pyplot-style authoring experience::
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from dash import Dash, html
-from dash_fn_interact.fn_interact import build_fn_panel
+from dash_fn_interact.fn_interact import FnPanel, build_fn_panel
 from dash_fn_interact.utils import _caller_name, _in_jupyter
 
 import dash_interact.html as _html_factories
@@ -94,13 +94,13 @@ class Page(html.Div):
         _loading: bool = True,
         _render: Callable[[Any], Any] | None = None,
         **kwargs: Any,
-    ) -> html.Div | Callable:
+    ) -> FnPanel | Callable:
         """Add an interact panel to this page."""
         _PageManager.activate(self)
         if fn is None:
 
-            def decorator(f: Callable) -> html.Div:
-                return self.interact(
+            def decorator(f: Callable) -> FnPanel:
+                return self.interact(  # type: ignore[return-value]
                     f,
                     _id=_id,
                     _manual=_manual,
@@ -118,13 +118,13 @@ class Page(html.Div):
             _render=_render,
             **kwargs,
         )
-        self.children.append(panel)
+        cast("list[Any]", self.children).append(panel)
         return panel
 
     def add(self, *components: Any) -> None:
         """Append arbitrary Dash components to this page."""
         _PageManager.activate(self)
-        self.children.extend(components)
+        cast("list[Any]", self.children).extend(components)
 
     def build_app(self, *, name: str | None = None) -> Dash:
         """Assemble and return a configured :class:`~dash.Dash` app."""

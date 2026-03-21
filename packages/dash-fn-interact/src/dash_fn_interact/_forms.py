@@ -966,7 +966,7 @@ class FnForm(Form):
             for f in fields:
                 if isinstance(_initial_values, dict):
                     if f.name in _initial_values:
-                        f.default = _initial_values[f.name]
+                        f.default = _initial_values[f.name]  # type: ignore[index]
                 elif hasattr(_initial_values, f.name):
                     f.default = getattr(_initial_values, f.name)
 

@@ -76,7 +76,7 @@ def build_fn_panel(
     **kwargs :
         Per-field shorthands forwarded to :class:`FnForm`.
     """
-    config_id = _id or fn.__name__
+    config_id = _id or getattr(fn, "__name__", repr(fn))
     output_id = f"_dft_interact_out_{config_id}"
 
     cfg: FnForm = FnForm(config_id, fn, **kwargs)

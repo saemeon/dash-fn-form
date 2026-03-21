@@ -10,15 +10,15 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Annotated, Literal
 
+import pytest
+from dash import dcc
+from dash_fn_interact import Field, FnForm, fixed
+
 
 class _Mode(Enum):
     fast = "fast"
     slow = "slow"
 
-
-import pytest
-from dash import dcc
-from dash_fn_interact import Field, FnForm, fixed
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

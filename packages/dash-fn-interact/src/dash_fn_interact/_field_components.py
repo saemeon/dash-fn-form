@@ -88,7 +88,7 @@ def _resolve_field_maker(value: Any) -> FieldMaker:
     """
     if value is None or value == "auto":
         try:
-            import dash_mantine_components  # noqa: F401
+            import dash_mantine_components  # noqa: F401  # type: ignore[import-unresolved]
 
             return make_dmc_field
         except ImportError:
@@ -173,9 +173,9 @@ def make_dcc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         if step is None:
             step = 1 if f.type == "int" else "any"
         if spec.widget == "slider" and spec.min is not None and spec.max is not None:
-            slider_step = (
+            slider_step: int | float = (
                 spec.step
-                if spec.step not in (None, "any")
+                if isinstance(spec.step, (int, float))
                 else (1 if f.type == "int" else 0.1)
             )
             slider = dcc.Slider(
@@ -314,7 +314,7 @@ def make_dmc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
     | `date` / `datetime` | `dcc.DatePickerSingle` *(fallback — DMC date API differs)* |
     """
     try:
-        import dash_mantine_components as dmc
+        import dash_mantine_components as dmc  # type: ignore[import-unresolved]
     except ImportError as exc:
         raise ImportError(
             "dash-mantine-components is required for make_dmc_field. "
@@ -438,7 +438,7 @@ def make_dbc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
     | `date` / `datetime` | `dcc.DatePickerSingle` *(fallback — DBC has no date picker)* |
     """
     try:
-        import dash_bootstrap_components as dbc
+        import dash_bootstrap_components as dbc  # type: ignore[import-unresolved]
     except ImportError as exc:
         raise ImportError(
             "dash-bootstrap-components is required for make_dbc_field. "
@@ -464,9 +464,9 @@ def make_dbc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         if step is None:
             step = 1 if f.type == "int" else None
         if spec.widget == "slider" and spec.min is not None and spec.max is not None:
-            slider_step = (
+            slider_step: int | float = (
                 spec.step
-                if spec.step not in (None, "any")
+                if isinstance(spec.step, (int, float))
                 else (1 if f.type == "int" else 0.1)
             )
             slider = dcc.Slider(
