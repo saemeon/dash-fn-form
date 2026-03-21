@@ -14,16 +14,21 @@ from dash_fn_interact._config_builder import Config, build_config
 
 
 def interact(
-    fn: Callable,
+    fn: Callable | None = None,
     *,
     _manual: bool = False,
     **kwargs: Any,
-) -> html.Div:
+) -> html.Div | Callable:
     """Build a self-contained interactive panel from a typed callable.
 
     The Dash equivalent of ``ipywidgets.interact()``.  Introspects *fn*'s
     signature, renders a form, and registers a callback that calls *fn* with
     the current field values whenever they change.
+
+    ``interact`` can be used as a plain function call **or** as a decorator.
+    This allows you to define a function and interact with it in a single shot.
+    As the examples below show, ``interact`` also works with functions that
+    have multiple arguments.
 
     Parameters
     ----------
@@ -32,6 +37,9 @@ def interact(
         with the resolved ``**kwargs`` to produce the output shown below the
         form.  Return a Dash component, a ``plotly.graph_objects.Figure``, or
         any value (rendered via ``repr``).
+
+        When omitted, ``interact`` returns a decorator — useful for the
+        ``@interact(...)`` form with per-field shorthands.
     _manual :
         ``False`` (default) — callback fires on every field change (live
         update).  ``True`` — an *Apply* button is added; callback fires on
@@ -46,6 +54,8 @@ def interact(
     html.Div
         Panel containing the form, an optional *Apply* button, and an output
         area.  Embed directly in ``app.layout``.
+    Callable
+        When *fn* is omitted, returns a decorator that accepts the function.
 
     Notes
     -----
@@ -53,27 +63,35 @@ def interact(
     twice with the same function will trigger a duplicate-ID warning — use
     :func:`build_config` directly if you need two panels for the same function.
 
-    Example::
+    Examples
+    --------
+    Plain function call::
 
-        import dash
-        from dash import html
-        from dash_fn_interact import interact
-
-        app = dash.Dash(__name__)
-
-        def make_wave(amplitude: float = 1.0, freq: float = 1.0):
-            import plotly.graph_objects as go
-            import numpy as np
-            t = np.linspace(0, 1, 300)
-            y = amplitude * np.sin(2 * np.pi * freq * t)
-            return go.Figure(go.Scatter(x=t, y=y))
-
-        panel = interact(make_wave, amplitude=(0, 2, 0.01), freq=(0.5, 10, 0.5))
+        panel = interact(make_wave, amplitude=(0, 2, 0.01))
         app.layout = html.Div([panel])
 
-        if __name__ == "__main__":
-            app.run(debug=True)
+    No-argument decorator — interact is applied when the function is defined::
+
+        @interact
+        def make_wave(amplitude: float = 1.0, freq: float = 1.0):
+            ...
+
+        app.layout = html.Div([make_wave])   # make_wave is now the panel
+
+    Decorator with per-field shorthands::
+
+        @interact(amplitude=(0, 2, 0.01), freq=(0.5, 10, 0.5))
+        def make_wave(amplitude: float = 1.0, freq: float = 1.0):
+            ...
+
+        app.layout = html.Div([make_wave])
     """
+    if fn is None:
+        # Called as @interact(...) with kwargs — return a decorator
+        def decorator(f: Callable) -> html.Div:
+            return interact(f, _manual=_manual, **kwargs)
+        return decorator
+
     config_id = fn.__name__
     output_id = f"_dft_interact_out_{config_id}"
 
