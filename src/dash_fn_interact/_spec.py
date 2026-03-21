@@ -140,6 +140,12 @@ class Field:
     """Replace the auto-generated component entirely. ``id`` is set internally."""
     component_prop: str = "value"
     """Property to read back from a custom ``component`` (default: ``"value"``)."""
+    widget: str | None = None
+    """Select an alternative widget for supported types.
+
+    * ``"slider"`` — render a ``dcc.Slider`` (or ``dmc.Slider``) instead of a
+      number input.  Requires ``min`` and ``max`` to be set.
+    """
 
     # --- numeric constraints (int / float only) ---
     min: float | None = None

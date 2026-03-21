@@ -165,6 +165,18 @@ def make_dcc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         step: Any = spec.step
         if step is None:
             step = 1 if f.type == "int" else "any"
+        if spec.widget == "slider" and spec.min is not None and spec.max is not None:
+            slider_step = spec.step if spec.step not in (None, "any") else (1 if f.type == "int" else 0.1)
+            slider = dcc.Slider(
+                id=fid,
+                min=spec.min,
+                max=spec.max,
+                step=slider_step,
+                value=f.default if f.default is not None else spec.min,
+                tooltip={"placement": "bottom", "always_visible": False},
+                className=spec.class_name,
+            )
+            return html.Div(slider, style=spec.style) if spec.style else slider
         return dcc.Input(
             id=fid,
             type="number",
@@ -292,6 +304,17 @@ def make_dmc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         step = spec.step
         if step is None:
             step = 1 if f.type == "int" else 0.01
+        if spec.widget == "slider" and spec.min is not None and spec.max is not None:
+            slider_step = spec.step if spec.step not in (None, "any") else (1 if f.type == "int" else 0.1)
+            return dmc.Slider(
+                id=fid,
+                min=spec.min,
+                max=spec.max,
+                step=slider_step,
+                value=f.default if f.default is not None else spec.min,
+                style=spec.style,
+                className=spec.class_name,
+            )
         return dmc.NumberInput(
             id=fid,
             value=f.default if f.default is not None else "",
@@ -404,6 +427,18 @@ def make_dbc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         step = spec.step
         if step is None:
             step = 1 if f.type == "int" else None
+        if spec.widget == "slider" and spec.min is not None and spec.max is not None:
+            slider_step = spec.step if spec.step not in (None, "any") else (1 if f.type == "int" else 0.1)
+            slider = dcc.Slider(
+                id=fid,
+                min=spec.min,
+                max=spec.max,
+                step=slider_step,
+                value=f.default if f.default is not None else spec.min,
+                tooltip={"placement": "bottom", "always_visible": False},
+                className=spec.class_name,
+            )
+            return html.Div(slider, style=spec.style) if spec.style else slider
         return dbc.Input(
             id=fid,
             type="number",
