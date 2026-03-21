@@ -11,6 +11,7 @@ from dash_fn_interact._field_components import (
 )
 from dash_fn_interact._forms import FieldRef, FnForm, Form, field_id
 from dash_fn_interact._interact import interact
+from dash_fn_interact._page import Page
 from dash_fn_interact._spec import Field, FieldHook, FromComponent, fixed
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
     "FieldMaker",
     "FieldRef",
     "FromComponent",
+    "Page",
     "field_id",
     "fixed",
     "interact",
