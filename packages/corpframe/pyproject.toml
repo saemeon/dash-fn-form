@@ -1,8 +1,8 @@
 [project]
-name = "dash-corpframe"
+name = "corpframe"
 dynamic = ["version"]
-description = "Corporate-framed chart capture for Plotly Dash — one-click export with header, footer, and branding"
-keywords = ["plotly", "dash", "capture", "corporate", "export"]
+description = "Corporate design frame for charts — wraps images with title, subtitle, footnotes, and sources using matplotlib"
+keywords = ["matplotlib", "corporate", "design", "frame", "chart"]
 classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -18,11 +18,18 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "matplotlib>=3.10.8",
+]
+
+[project.optional-dependencies]
+dash = [
     "dash-capture",
     "dash>=4.0.0",
-    "matplotlib>=3.10.8",
     "plotly>=6.6.0",
 ]
+
+[project.scripts]
+corpframe = "corpframe.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel", "setuptools-scm>=8.0"]
@@ -30,15 +37,15 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 root = "../.."
-write_to = "packages/dash-corpframe/src/dash_corpframe/_version.py"
+write_to = "packages/corpframe/src/corpframe/_version.py"
 version_scheme = "post-release"
 local_scheme = "no-local-version"
 
 [tool.setuptools.dynamic]
-version = { attr = "dash_corpframe._version.__version__" }
+version = { attr = "corpframe._version.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-dash_corpframe = ["py.typed"]
+corpframe = ["py.typed"]

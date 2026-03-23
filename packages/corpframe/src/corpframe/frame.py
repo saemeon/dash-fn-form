@@ -1,18 +1,23 @@
-#!/usr/bin/env python3
-"""Corporate frame — wraps a captured image with a matplotlib title header.
+# Copyright (c) Simon Niederberger.
+# Distributed under the terms of the MIT License.
 
-Usage:
-    python corporate_frame.py \\
-        --input chart.png --output framed.png \\
-        --title "Q4 Results" --subtitle "Revenue by Region"
+"""Corporate frame — wraps a PNG image with header and footer using matplotlib.
 
-Dummy implementation using plain matplotlib.
-Replace with actual corporate design package.
+This is the core module. No Dash dependency. Works standalone::
+
+    from corpframe import apply_frame
+
+    with open("chart.png", "rb") as f:
+        raw = f.read()
+
+    framed = apply_frame(raw, title="Q4 Revenue", sources="Source: Bloomberg")
+
+    with open("chart_framed.png", "wb") as f:
+        f.write(framed)
 """
 
 from __future__ import annotations
 
-import argparse
 import io
 
 import matplotlib.pyplot as plt
@@ -28,13 +33,32 @@ def apply_frame(
     sources: str = "",
     dpi: int = 300,
 ) -> bytes:
-    """Wrap a PNG image with a title header using matplotlib."""
+    """Wrap a PNG image with a corporate header and footer.
+
+    Parameters
+    ----------
+    png_bytes :
+        Raw PNG image data.
+    title :
+        Header title (bold, with accent underline).
+    subtitle :
+        Header subtitle (italic, below title).
+    footnotes :
+        Footer text, left-aligned.
+    sources :
+        Footer text, right-aligned.
+    dpi :
+        Output resolution.
+
+    Returns
+    -------
+    bytes
+        Framed PNG image data.
+    """
     img = plt.imread(io.BytesIO(png_bytes))
     img_h, img_w = img.shape[:2]
 
-    # Header: title + underline + subtitle
     header_h = int(img_h * 0.12) if (title or subtitle) else 0
-    # Footer: footnotes + sources
     footer_h = int(img_h * 0.08) if (footnotes or sources) else 0
     total_h = img_h + header_h + footer_h
 
@@ -56,7 +80,6 @@ def apply_frame(
                 fontsize=11, fontweight="bold", color="#1a1a2e",
                 va="center", transform=ax.transAxes,
             )
-            # Underline
             ax.plot(
                 [0.03, 0.35], [0.42, 0.42],
                 color="#e94560", linewidth=2,
@@ -81,6 +104,7 @@ def apply_frame(
         ax.set_ylim(0, 1)
         ax.set_facecolor("white")
         ax.axis("off")
+
         ax.plot(
             [0.03, 0.97], [0.85, 0.85],
             color="#dddddd", linewidth=0.5,
@@ -104,30 +128,3 @@ def apply_frame(
     plt.close(fig)
     buf.seek(0)
     return buf.read()
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Apply corporate frame to PNG")
-    parser.add_argument("--input", required=True)
-    parser.add_argument("--output", required=True)
-    parser.add_argument("--title", default="")
-    parser.add_argument("--subtitle", default="")
-    parser.add_argument("--footnotes", default="")
-    parser.add_argument("--sources", default="")
-    parser.add_argument("--dpi", type=int, default=300)
-    args = parser.parse_args()
-
-    with open(args.input, "rb") as f:
-        png_bytes = f.read()
-
-    framed = apply_frame(
-        png_bytes, title=args.title, subtitle=args.subtitle,
-        footnotes=args.footnotes, sources=args.sources, dpi=args.dpi,
-    )
-
-    with open(args.output, "wb") as f:
-        f.write(framed)
-
-
-if __name__ == "__main__":
-    main()

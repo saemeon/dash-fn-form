@@ -1,17 +1,49 @@
 # Copyright (c) Simon Niederberger.
 # Distributed under the terms of the MIT License.
 
-"""One-click corporate capture for Dash — wraps dash-capture with the
-corporate renderer pre-configured."""
+"""Dash integration for corpframe — one-click corporate chart capture.
+
+Requires ``pip install corpframe[dash]`` (adds dash-capture, dash, plotly).
+
+Usage::
+
+    from corpframe.dash import corporate_capture_graph, corporate_renderer
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
-from dash import dcc, html
+try:
+    from dash import dcc, html
+    from dash_capture import capture_graph, plotly_strategy
+except ImportError as e:
+    raise ImportError(
+        "corpframe.dash requires dash-capture and dash. "
+        "Install with: pip install corpframe[dash]"
+    ) from e
 
-from dash_capture import capture_graph, plotly_strategy
-from dash_corpframe.corporate_frame import corporate_renderer
+from corpframe.frame import apply_frame
+
+
+def corporate_renderer(
+    _target,
+    _snapshot_img,
+    title: str = "",
+    subtitle: str = "",
+    footnotes: str = "",
+    sources: str = "",
+):
+    """Renderer that wraps captured image with corporate header and footer.
+
+    Compatible with dash-capture's renderer protocol:
+    ``(_target, _snapshot_img, **fields) -> None``.
+    """
+    framed = apply_frame(
+        _snapshot_img(), title=title, subtitle=subtitle,
+        footnotes=footnotes, sources=sources,
+    )
+    _target.write(framed)
 
 
 def corporate_capture_graph(
@@ -35,40 +67,7 @@ def corporate_capture_graph(
     Combines ``capture_graph`` with the corporate frame renderer.
     The wizard shows fields for title, subtitle, footnotes, and sources
     — pre-filled with the values passed here.
-
-    Parameters
-    ----------
-    graph :
-        The ``dcc.Graph`` component or its string ``id``.
-    trigger :
-        Button label or custom component.
-    title :
-        Default header title.
-    subtitle :
-        Default header subtitle.
-    footnotes :
-        Default footer footnotes.
-    sources :
-        Default footer sources.
-    strip_title :
-        Remove the Plotly title before capture (default True — the
-        corporate header replaces it).
-    filename :
-        Download filename.
-
-    Example::
-
-        app.layout = html.Div([
-            dcc.Graph(id="revenue", figure=fig),
-            corporate_capture_graph(
-                "revenue",
-                title="Q4 Revenue",
-                subtitle="By region, 2026",
-                sources="Source: Bloomberg",
-            ),
-        ])
     """
-    # Pre-fill the renderer fields with the provided defaults via field_specs
     from dash_fn_forms import Field
 
     field_specs = {}

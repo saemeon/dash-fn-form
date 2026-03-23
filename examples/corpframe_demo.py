@@ -1,4 +1,4 @@
-"""dash-corpframe demo — run with: uv run python examples/corpframe_demo.py
+"""corpframe Dash demo — run with: uv run python examples/corpframe_demo.py
 
 One-click corporate chart export: capture → strip Plotly decorations →
 add corporate header (title, subtitle) and footer (footnotes, sources).
@@ -8,7 +8,7 @@ import dash
 import plotly.graph_objects as go
 from dash import dcc, html
 
-from dash_corpframe import corporate_capture_graph
+from corpframe.dash import corporate_capture_graph
 
 # --- sample figure ---
 fig = go.Figure(
@@ -34,7 +34,7 @@ app.layout = html.Div(
     style={"maxWidth": "900px", "margin": "0 auto", "padding": "20px",
            "fontFamily": "system-ui, sans-serif"},
     children=[
-        html.H2("dash-corpframe — Corporate Chart Export"),
+        html.H2("corpframe — Corporate Chart Export"),
         html.P(
             "Click the button to open a wizard with pre-filled corporate "
             "framing fields (title, subtitle, footnotes, sources). "
