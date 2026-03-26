@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from dash import dcc, html
+
 from dash_fn_form import FnForm
 from dash_fn_form.fn_interact import FnPanel, _cached_caller, build_fn_panel
 

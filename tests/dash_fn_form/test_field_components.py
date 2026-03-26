@@ -12,6 +12,7 @@ from typing import Literal
 
 import pytest
 from dash import dcc
+
 from dash_fn_form import Field, FnForm
 
 
@@ -362,6 +363,7 @@ def test_resolve_field_maker_callable():
 
 def test_resolve_field_maker_invalid_raises():
     import pytest
+
     from dash_fn_form._field_components import _resolve_field_maker
 
     with pytest.raises(ValueError, match="Unknown"):

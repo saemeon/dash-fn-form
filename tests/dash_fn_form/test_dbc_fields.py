@@ -10,9 +10,10 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
+import dash_bootstrap_components as dbc
 import pytest
 from dash import dcc
-import dash_bootstrap_components as dbc
+
 from dash_fn_form import Field, FnForm
 
 
@@ -344,7 +345,7 @@ def test_dict_produces_textarea():
 
 
 def test_dict_with_default_serialized_as_json():
-    def fn(cfg: dict = {"key": "val"}):
+    def fn(cfg: dict = {"key": "val"}):  # noqa: B006
         pass
 
     form = _form_dbc(fn)

@@ -13,6 +13,7 @@ from typing import Annotated, Literal
 
 import pytest
 from dash import dcc
+
 from dash_fn_form import Field, FnForm, fixed
 
 
@@ -648,7 +649,6 @@ def test_callable_shorthand_sets_validator():
 
 
 def test_component_shorthand():
-    import dash.html as html
 
     def fn(x: float = 1.0):
         pass

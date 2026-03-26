@@ -1,5 +1,4 @@
 """Tests for form sections."""
-from dash import html
 from dash_fn_form import FnForm
 
 

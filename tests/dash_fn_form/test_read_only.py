@@ -1,5 +1,4 @@
 """Tests for read-only mode."""
-from dash import html
 from dash_fn_form import FnForm
 
 

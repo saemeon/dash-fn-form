@@ -10,9 +10,10 @@ from datetime import date
 from enum import Enum
 from typing import Literal
 
+import dash_mantine_components as dmc
 import pytest
 from dash import dcc
-import dash_mantine_components as dmc
+
 from dash_fn_form import Field, FnForm
 
 
@@ -332,7 +333,7 @@ def test_list_literal_str_data_contains_options():
 
 
 def test_list_literal_str_default_value():
-    def fn(tags: list[Literal["a", "b", "c"]] = ["a", "b"]):
+    def fn(tags: list[Literal["a", "b", "c"]] = ["a", "b"]):  # noqa: B006
         pass
 
     form = _form_dmc(fn)
@@ -376,7 +377,7 @@ def test_dict_produces_textarea():
 
 
 def test_dict_with_default_serialized_as_json():
-    def fn(cfg: dict = {"key": "val"}):
+    def fn(cfg: dict = {"key": "val"}):  # noqa: B006
         pass
 
     form = _form_dmc(fn)
