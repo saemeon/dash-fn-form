@@ -1,18 +1,18 @@
 # Copyright (c) Simon Niederberger.
 # Distributed under the terms of the MIT License.
 
-"""dash-fn-forms — introspect a typed callable into a Dash form."""
+"""dash-fn-form — introspect a typed callable into a Dash form."""
 
-from dash_fn_forms._field_components import (
+from dash_fn_form._field_components import (
     FieldMaker,
     make_dbc_field,
     make_dcc_field,
     make_dmc_field,
 )
-from dash_fn_forms._forms import FieldRef, FnForm, Form, field_id
-from dash_fn_forms._renderers import register_renderer
-from dash_fn_forms._spec import Field, FieldHook, FromComponent, fixed
-from dash_fn_forms.fn_interact import FnPanel, build_fn_panel
+from dash_fn_form._forms import FieldRef, FnForm, Form, field_id
+from dash_fn_form._renderers import register_renderer
+from dash_fn_form._spec import Field, FieldHook, FromComponent, fixed
+from dash_fn_form.fn_interact import FnPanel, build_fn_panel
 
 __all__ = [
     "Field",

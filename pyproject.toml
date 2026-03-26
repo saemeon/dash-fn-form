@@ -1,5 +1,5 @@
 [project]
-name = "dash-fn-forms"
+name = "dash-fn-form"
 dynamic = ["version"]
 description = "Introspection-based UI engine for Plotly Dash — transform type-hinted Python functions into reactive Dash forms."
 keywords = ["plotly", "dash", "visualization", "dashboard"]
@@ -27,11 +27,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/saemeon/dash-fn-forms"
-Repository = "https://github.com/saemeon/dash-fn-forms"
+Homepage = "https://github.com/saemeon/dash-fn-form"
+Repository = "https://github.com/saemeon/dash-fn-form"
 
 [dependency-groups]
-test = ["pytest", "pytest-cov"]
+test = ["pytest", "pytest-cov", "dash-bootstrap-components", "dash-mantine-components", "matplotlib", "pandas", "pydantic"]
 doc = ["mkdocs", "mkdocs-material", "mkdocstrings[python]", "mike"]
 dev = [
     "ruff",
@@ -48,20 +48,20 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 version_scheme = "post-release"
 local_scheme = "no-local-version"
-write_to = "src/dash_fn_forms/_version.py"
+write_to = "src/dash_fn_form/_version.py"
 
 [tool.setuptools.dynamic]
-version = { attr = "dash_fn_forms._version.__version__" }
+version = { attr = "dash_fn_form._version.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-dash_fn_forms = ["py.typed"]
+dash_fn_form = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/dash_fn_forms --cov-report=term-missing"
+addopts = "--cov=src/dash_fn_form --cov-report=term-missing"
 
 [tool.ty.src]
 include = ["src"]

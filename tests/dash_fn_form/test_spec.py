@@ -6,8 +6,8 @@
 from __future__ import annotations
 
 from dash import State, dcc
-from dash_fn_forms import Field, FnForm, fixed
-from dash_fn_forms._spec import FieldHook, FromComponent, _FieldFixed
+from dash_fn_form import Field, FnForm, fixed
+from dash_fn_form._spec import FieldHook, FromComponent, _FieldFixed
 
 # ── fixed ─────────────────────────────────────────────────────────────────────
 
