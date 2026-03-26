@@ -1,13 +1,34 @@
-[tool.uv.workspace]
-members = ["packages/*"]
-exclude = ["packages/corpframe-gallery", "packages/mcd", "packages/corpplt", "packages/corporate-design-packager"]
+[project]
+name = "dash-fn-forms"
+dynamic = ["version"]
+description = "Introspection-based UI engine for Plotly Dash — transform type-hinted Python functions into reactive Dash forms."
+keywords = ["plotly", "dash", "visualization", "dashboard"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Simon Niederberger", email = "s.niederberger@hotmail.com" },
+]
+maintainers = [
+    { name = "Simon Niederberger", email = "s.niederberger@hotmail.com" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "annotated-types>=0.7.0",
+    "dash>=4.0.0",
+    "plotly>=6.6.0",
+]
 
-[tool.uv.sources]
-dash-fn-forms = { workspace = true }
-dash-capture = { workspace = true }
-mpl-brandpacker = { workspace = true }
-corpframe = { workspace = true }
-gallery-viewer = { workspace = true }
+[project.urls]
+Homepage = "https://github.com/saemeon/dash-fn-forms"
+Repository = "https://github.com/saemeon/dash-fn-forms"
 
 [dependency-groups]
 test = ["pytest", "pytest-cov"]
@@ -16,30 +37,34 @@ dev = [
     "ruff",
     "prek",
     "ty",
-    "numpy",
-    "matplotlib",
-    "pandas",
-    "ipykernel>=7.2.0",
-    "ipywidgets>=8.1.8",
-    "pydantic>=2.12.5",
-    "dash-mantine-components>=2.6.0",
-    "dash-bootstrap-components>=2.0.4",
-    "annotated-types>=0.7.0",
-    "dash[testing]",
-    "dash-ace>=0.2.1",
     { include-group = "test" },
     { include-group = "doc" },
 ]
 
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
+write_to = "src/dash_fn_forms/_version.py"
+
+[tool.setuptools.dynamic]
+version = { attr = "dash_fn_forms._version.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+dash_fn_forms = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=packages --cov-report=term-missing"
-
-[tool.ty.environment]
-python = ".venv"
+addopts = "--cov=src/dash_fn_forms --cov-report=term-missing"
 
 [tool.ty.src]
-include = ["packages"]
+include = ["src"]
 
 [tool.mypy]
 ignore_missing_imports = true

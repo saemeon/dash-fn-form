@@ -19,18 +19,3 @@ def reset_fn_interact_globals():
     _registered_config_ids.update(before_ids)
     _RENDERERS.clear()
     _RENDERERS.update(before_renderers)
-
-
-@pytest.fixture(autouse=True)
-def reset_page_manager():
-    """Reset _PageManager singleton between tests."""
-    try:
-        from dash_interact._page_manager import _PageManager
-
-        before = _PageManager._page
-        before_hook = _PageManager._hook_registered
-        yield
-        _PageManager._page = before
-        _PageManager._hook_registered = before_hook
-    except ImportError:
-        yield
