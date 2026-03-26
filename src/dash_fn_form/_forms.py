@@ -29,7 +29,9 @@ from typing import (
 import dash
 from dash import Input, Output, State, dcc, html
 
+from dash_fn_form._form_layouts import render_layout
 from dash_fn_form._spec import Field, FieldHook, _FieldFixed
+from dash_fn_form.layout import Accordion, Tabs
 
 _CONSTRAINT_ATTRS: list[tuple[str, str]] = [
     ("ge", "min"),
@@ -183,6 +185,7 @@ class Form(html.Div):
         _replace: bool = False,
         _sections: list[tuple[str, list[str]]] | None = None,
         _read_only: bool = False,
+        _layout: Accordion | Tabs | None = None,
     ):
         if config_id in _registered_config_ids:
             if not _replace:
@@ -248,30 +251,8 @@ class Form(html.Div):
                 )
             field_components[f.name] = child
 
-        if _sections:
-            layout_children: list = []
-            used_fields: set[str] = set()
-            for section_name, field_names in _sections:
-                section_children = []
-                for fname in field_names:
-                    if fname in field_components:
-                        section_children.append(field_components[fname])
-                        used_fields.add(fname)
-                if section_children:
-                    layout_children.append(
-                        html.Fieldset(
-                            [html.Legend(section_name, style={"fontWeight": "bold", "fontSize": "0.9em", "color": "#555"})]
-                            + section_children,
-                            style={"border": "1px solid #ddd", "borderRadius": "4px", "padding": "8px 12px", "marginBottom": "12px"},
-                        )
-                    )
-            # Add any ungrouped fields at the end
-            for fname, comp in field_components.items():
-                if fname not in used_fields:
-                    layout_children.append(comp)
-            children.extend(layout_children)
-        else:
-            children.extend(field_components.values())
+        use_dmc = isinstance(_field_components, str) and _field_components == "dmc"
+        children.extend(render_layout(_layout, _sections, field_components, use_dmc))
 
         if _cols > 1:
             outer_style: dict = {
@@ -303,6 +284,8 @@ class Form(html.Div):
         object.__setattr__(self, "_form_validator", _validator)
         object.__setattr__(self, "_sections", _sections)
         object.__setattr__(self, "_read_only", _read_only)
+        object.__setattr__(self, "_layout", _layout)
+        object.__setattr__(self, "_field_components_type", _field_components if isinstance(_field_components, str) else None)
 
     @property
     def named_states(self) -> dict[str, State]:
@@ -976,6 +959,7 @@ class FnForm(Form):
         _replace: bool = False,
         _sections: list[tuple[str, list[str]]] | None = None,
         _read_only: bool = False,
+        _layout: Accordion | Tabs | None = None,
         **kwargs: Field | FieldHook | tuple,
     ):
         styles = _styles or {}
@@ -1052,6 +1036,7 @@ class FnForm(Form):
             _replace=_replace,
             _sections=_sections,
             _read_only=_read_only,
+            _layout=_layout,
         )
         object.__setattr__(self, "_fn", fn)
 

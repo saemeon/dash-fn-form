@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import inspect
 from collections.abc import Callable
@@ -139,6 +140,7 @@ def build_fn_panel(
     _cache_maxsize: int = 128,
     _auto_slider: bool = False,
     _sections: list[tuple[str, list[str]]] | None = None,
+    _layout: Any = None,
     **kwargs: Any,
 ) -> FnPanel:
     """Build and return a self-contained interactive panel.
@@ -174,10 +176,8 @@ def build_fn_panel(
 
     if _auto_slider:
         hints: dict[str, Any] = {}
-        try:
+        with contextlib.suppress(Exception):
             hints = get_type_hints(fn)
-        except Exception:
-            pass
         for p in inspect.signature(fn).parameters.values():
             if p.name in kwargs:  # user already specified
                 continue
@@ -192,7 +192,7 @@ def build_fn_panel(
             ):
                 kwargs[p.name] = _auto_slider_range(default, "int")
 
-    cfg: FnForm = FnForm(config_id, fn, _sections=_sections, **kwargs)
+    cfg: FnForm = FnForm(config_id, fn, _sections=_sections, _layout=_layout, **kwargs)
     _call = _cached_caller(fn, cfg, _cache_maxsize) if _cache else None
 
     _inner = html.Div(id=output_id, style={"marginTop": "16px"})

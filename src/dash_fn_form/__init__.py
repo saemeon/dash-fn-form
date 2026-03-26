@@ -13,8 +13,10 @@ from dash_fn_form._forms import FieldRef, FnForm, Form, field_id
 from dash_fn_form._renderers import register_renderer
 from dash_fn_form._spec import Field, FieldHook, FromComponent, fixed
 from dash_fn_form.fn_interact import FnPanel, build_fn_panel
+from dash_fn_form.layout import Accordion, Section, Tabs
 
 __all__ = [
+    "Accordion",
     "Field",
     "FieldHook",
     "FieldMaker",
@@ -23,6 +25,8 @@ __all__ = [
     "FnForm",
     "Form",
     "FromComponent",
+    "Section",
+    "Tabs",
     "build_fn_panel",
     "field_id",
     "fixed",
