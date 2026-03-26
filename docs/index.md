@@ -2,7 +2,7 @@
 
 Headless engine for `dash-interact`. Introspects a type-hinted Python callable and builds a reactive Dash form panel.
 
-Most users should install [`dash-interact`](index.md) instead — it includes this package and adds the `page` API.
+Most users should install [`dash-interact`](https://github.com/saemeon/dash-interact) instead — it includes this package and adds the `page` API.
 
 ## Installation
 

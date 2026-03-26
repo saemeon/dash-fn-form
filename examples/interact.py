@@ -18,7 +18,7 @@ from typing import Literal
 import numpy as np
 import plotly.graph_objects as go
 from dash import Dash, Input, Output, callback, dcc, html
-from dash_interact import Field, FnForm
+from dash_fn_form import Field, FnForm
 
 app = Dash(__name__)
 

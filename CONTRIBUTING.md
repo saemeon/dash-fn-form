@@ -1,12 +1,12 @@
 # Contributing
 
-Bug reports, feature requests, and pull requests are welcome on [GitHub](https://github.com/saemeon/mypackage/issues).
+Bug reports, feature requests, and pull requests are welcome on [GitHub](https://github.com/saemeon/dash-fn-form/issues).
 
 ## Development setup
 
 ```bash
-git clone https://github.com/saemeon/mypackage
-cd mypackage
+git clone https://github.com/saemeon/dash-fn-form
+cd dash-fn-form
 uv sync --group dev
 ```
 
