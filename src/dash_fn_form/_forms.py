@@ -181,6 +181,8 @@ class Form(html.Div):
         _field_components: Any = None,
         _description: str | None = None,
         _replace: bool = False,
+        _sections: list[tuple[str, list[str]]] | None = None,
+        _read_only: bool = False,
     ):
         if config_id in _registered_config_ids:
             if not _replace:
@@ -224,9 +226,11 @@ class Form(html.Div):
             )
 
         field_defaults = {f.name: f.default for f in _fields}
+        field_components: dict[str, Any] = {}
         for f in _fields:
             child = _build_field(
-                config_id, f, label_style, label_class_name, field_maker
+                config_id, f, label_style, label_class_name, field_maker,
+                read_only=_read_only,
             )
             if f.spec and f.spec.visible:
                 other, op, val = f.spec.visible
@@ -242,7 +246,32 @@ class Form(html.Div):
                     id=f"_dft_vis_{config_id}_{f.name}",
                     style=vis_style or None,
                 )
-            children.append(child)
+            field_components[f.name] = child
+
+        if _sections:
+            layout_children: list = []
+            used_fields: set[str] = set()
+            for section_name, field_names in _sections:
+                section_children = []
+                for fname in field_names:
+                    if fname in field_components:
+                        section_children.append(field_components[fname])
+                        used_fields.add(fname)
+                if section_children:
+                    layout_children.append(
+                        html.Fieldset(
+                            [html.Legend(section_name, style={"fontWeight": "bold", "fontSize": "0.9em", "color": "#555"})]
+                            + section_children,
+                            style={"border": "1px solid #ddd", "borderRadius": "4px", "padding": "8px 12px", "marginBottom": "12px"},
+                        )
+                    )
+            # Add any ungrouped fields at the end
+            for fname, comp in field_components.items():
+                if fname not in used_fields:
+                    layout_children.append(comp)
+            children.extend(layout_children)
+        else:
+            children.extend(field_components.values())
 
         if _cols > 1:
             outer_style: dict = {
@@ -272,6 +301,8 @@ class Form(html.Div):
         object.__setattr__(self, "_config_id", config_id)
         object.__setattr__(self, "_fixed_values", fixed_values)
         object.__setattr__(self, "_form_validator", _validator)
+        object.__setattr__(self, "_sections", _sections)
+        object.__setattr__(self, "_read_only", _read_only)
 
     @property
     def named_states(self) -> dict[str, State]:
@@ -331,7 +362,7 @@ class Form(html.Div):
         Fields with ``Field(visible=("other_field", op, value))`` are
         wrapped in a div whose ``display`` style is toggled whenever the
         controlling field changes.  Supported operators: ``==``, ``!=``,
-        ``"in"``, ``"not in"``.
+        ``"in"``, ``"not in"``, ``">"``, ``">="``, ``"<"``, ``"<="``.
 
         No arguments needed — call once after constructing the :class:`Config`.
         """
@@ -374,6 +405,10 @@ class Form(html.Div):
                     else if (cond.op === '!=') show = value != cond.val;
                     else if (cond.op === 'in') show = Array.isArray(cond.val) && cond.val.includes(value);
                     else if (cond.op === 'not in') show = !Array.isArray(cond.val) || !cond.val.includes(value);
+                    else if (cond.op === '>') show = value > cond.val;
+                    else if (cond.op === '>=') show = value >= cond.val;
+                    else if (cond.op === '<') show = value < cond.val;
+                    else if (cond.op === '<=') show = value <= cond.val;
                     else show = true;
                     return show ? {{}} : {{"display": "none"}};
                 }});
@@ -939,6 +974,8 @@ class FnForm(Form):
         _validator: Callable[[dict], str | None] | None = None,
         _field_components: Any = None,
         _replace: bool = False,
+        _sections: list[tuple[str, list[str]]] | None = None,
+        _read_only: bool = False,
         **kwargs: Field | FieldHook | tuple,
     ):
         styles = _styles or {}
@@ -1013,6 +1050,8 @@ class FnForm(Form):
             _field_components=_field_components,
             _description=description,
             _replace=_replace,
+            _sections=_sections,
+            _read_only=_read_only,
         )
         object.__setattr__(self, "_fn", fn)
 
@@ -1258,6 +1297,8 @@ _RESERVED = frozenset(
         "_initial_values",
         "_validator",
         "_field_components",
+        "_sections",
+        "_read_only",
     }
 )
 
@@ -1355,6 +1396,14 @@ def _check_visible(value: Any, op: str, expected: Any) -> bool:
         return value in expected
     if op == "not in":
         return value not in expected
+    if op == ">":
+        return value is not None and value > expected
+    if op == ">=":
+        return value is not None and value >= expected
+    if op == "<":
+        return value is not None and value < expected
+    if op == "<=":
+        return value is not None and value <= expected
     return True
 
 
@@ -1382,6 +1431,7 @@ def _build_field(
     label_style: dict | None,
     label_class_name: str,
     field_maker: Any,
+    read_only: bool = False,
 ) -> html.Div:
     """Build a labeled input component for a single field."""
     spec = f.spec or Field()
@@ -1393,6 +1443,22 @@ def _build_field(
     wrapper_style: dict = {}
     if spec.col_span > 1:
         wrapper_style["gridColumn"] = f"span {spec.col_span}"
+
+    if read_only:
+        display_val = str(f.default) if f.default is not None else ""
+        if f.type == "bool":
+            display_val = "Yes" if f.default else "No"
+        elif f.type in ("literal", "enum"):
+            display_val = str(f.default) if f.default is not None else "\u2014"
+        component = html.Span(
+            display_val,
+            id=fid,
+            style={"fontWeight": "500", "padding": "4px 0", "display": "block"},
+        )
+        children: list = [label, component]
+        if spec.description:
+            children.append(html.Small(spec.description, style={"color": "#666", "display": "block"}))
+        return html.Div(children, style=wrapper_style or None)
 
     if spec.component is not None:
         comp = copy.copy(spec.component)

@@ -6,8 +6,9 @@
 from __future__ import annotations
 
 import functools
+import inspect
 from collections.abc import Callable
-from typing import Any
+from typing import Any, get_type_hints
 
 from dash import Input, Output, State, callback, dcc, html
 
@@ -107,6 +108,26 @@ def _cached_caller(
     return _call
 
 
+def _auto_slider_range(default: int | float, param_type: str) -> tuple:
+    """Infer slider (min, max, step) from a numeric default, ipywidgets-style."""
+    if param_type == "int":
+        v = int(default)
+        if v == 0:
+            return (-10, 10, 1)
+        elif v > 0:
+            return (0, max(3 * v, v + 1), 1)
+        else:
+            return (min(3 * v, v - 1), 0, 1)
+    else:  # float
+        v = float(default)
+        if v == 0:
+            return (-1.0, 1.0, 0.1)
+        elif v > 0:
+            return (0.0, round(3 * v, 10), round(max(v / 10, 0.01), 10))
+        else:
+            return (round(3 * v, 10), 0.0, round(max(abs(v) / 10, 0.01), 10))
+
+
 def build_fn_panel(
     fn: Callable,
     *,
@@ -116,6 +137,8 @@ def build_fn_panel(
     _render: Callable[[Any], Any] | None = None,
     _cache: bool = False,
     _cache_maxsize: int = 128,
+    _auto_slider: bool = False,
+    _sections: list[tuple[str, list[str]]] | None = None,
     **kwargs: Any,
 ) -> FnPanel:
     """Build and return a self-contained interactive panel.
@@ -149,7 +172,27 @@ def build_fn_panel(
     config_id = _id or getattr(fn, "__name__", repr(fn))
     output_id = f"_dft_interact_out_{config_id}"
 
-    cfg: FnForm = FnForm(config_id, fn, **kwargs)
+    if _auto_slider:
+        hints: dict[str, Any] = {}
+        try:
+            hints = get_type_hints(fn)
+        except Exception:
+            pass
+        for p in inspect.signature(fn).parameters.values():
+            if p.name in kwargs:  # user already specified
+                continue
+            ann = hints.get(p.name, p.annotation)
+            default = p.default
+            if default is inspect.Parameter.empty:
+                continue
+            if ann is float or isinstance(default, float):
+                kwargs[p.name] = _auto_slider_range(default, "float")
+            elif (ann is int or isinstance(default, int)) and not isinstance(
+                default, bool
+            ):
+                kwargs[p.name] = _auto_slider_range(default, "int")
+
+    cfg: FnForm = FnForm(config_id, fn, _sections=_sections, **kwargs)
     _call = _cached_caller(fn, cfg, _cache_maxsize) if _cache else None
 
     _inner = html.Div(id=output_id, style={"marginTop": "16px"})
