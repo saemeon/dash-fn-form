@@ -1126,6 +1126,25 @@ def _resolve_spec(
     return spec
 
 
+def _zero_default(field_type: str) -> Any:
+    """Return a sensible zero-value for a field type with no user-provided default."""
+    _defaults: dict[str, Any] = {
+        "int": 0,
+        "float": 0.0,
+        "bool": False,
+        "str": "",
+        "date": None,
+        "datetime": None,
+        "list": [],
+        "tuple": (),
+        "dict": {},
+        "literal": None,
+        "enum": None,
+        "path": None,
+    }
+    return _defaults.get(field_type)
+
+
 def _infer_type(annotation: Any, default: Any) -> tuple[str, tuple, bool]:
     """Return (field_type, args, optional) from a parameter annotation + default."""
     origin = get_origin(annotation)
@@ -1191,9 +1210,8 @@ def _get_fields(
         if include_set is not None and param.name not in include_set:
             continue
 
-        raw_default = (
-            param.default if param.default is not inspect.Parameter.empty else None
-        )
+        has_default = param.default is not inspect.Parameter.empty
+        raw_default = param.default if has_default else None
 
         # Legacy: FieldHook as default — kept for renderer functions (e.g. FromPlotly).
         # For user functions, prefer Field(hook=...) via field_specs or Annotated.
@@ -1241,6 +1259,13 @@ def _get_fields(
             annotated_spec = Field(hook=hook_from_default)
 
         field_type, args, optional = _infer_type(annotation, raw_default)
+
+        # Provide a sensible zero-value default when no default was given.
+        # Matches ipywidgets: `def fn(x: int): ...` creates a number input
+        # starting at 0 rather than requiring `def fn(x: int = 0): ...`.
+        if not has_default and raw_default is None and not optional:
+            raw_default = _zero_default(field_type)
+
         fields.append(
             _Field(
                 name=param.name,
