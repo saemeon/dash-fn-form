@@ -257,6 +257,7 @@ def test_list_produces_text_input():
 
 def test_list_literal_produces_multi_dropdown():
     """list[Literal[...]] produces a multi-select dropdown."""
+
     def fn(tags: list[Literal["a", "b", "c"]] | None = None):
         pass
 

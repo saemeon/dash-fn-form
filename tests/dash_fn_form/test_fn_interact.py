@@ -198,9 +198,9 @@ def test_cached_caller_bool_list_values():
     cfg = FnForm(uid, fn)
     caller = _cached_caller(fn, cfg, maxsize=128)
 
-    caller([])       # unchecked
-    caller([])       # same — cached
-    caller(["flag"]) # checked — new call
+    caller([])  # unchecked
+    caller([])  # same — cached
+    caller(["flag"])  # checked — new call
 
     assert call_count[0] == 2
 
@@ -307,7 +307,9 @@ def test_compute_custom_renderer():
     def fn(x: float = 1.0):
         return x
 
-    panel = build_fn_panel(fn, _id=f"_t_render_{id(fn)}", _render=lambda v: _html.H2(str(v)))
+    panel = build_fn_panel(
+        fn, _id=f"_t_render_{id(fn)}", _render=lambda v: _html.H2(str(v))
+    )
     result = panel.compute(42.0)
     assert isinstance(result, _html.H2)
 
@@ -329,6 +331,7 @@ def test_cached_caller_unhashable_falls_back_to_direct_call():
 
     # Patch _make_hashable to raise TypeError to simulate unhashable
     import dash_fn_form.fn_interact as _fi
+
     original = _fi._make_hashable
 
     def _raise(_):

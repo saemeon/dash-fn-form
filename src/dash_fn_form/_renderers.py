@@ -184,7 +184,12 @@ def _dict_to_component(d: dict, renderer: Callable[[Any], Any] | None) -> html.D
             rows.append(
                 html.Div(
                     [label, content],
-                    style={"display": "flex", "alignItems": "baseline", "gap": "4px", "marginBottom": "4px"},
+                    style={
+                        "display": "flex",
+                        "alignItems": "baseline",
+                        "gap": "4px",
+                        "marginBottom": "4px",
+                    },
                 )
             )
         else:

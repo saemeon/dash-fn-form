@@ -1,4 +1,5 @@
 """Tests for read-only mode."""
+
 from dash_fn_form import FnForm
 
 

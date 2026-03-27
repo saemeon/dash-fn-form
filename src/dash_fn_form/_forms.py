@@ -21,6 +21,7 @@ from typing import (
     Any,
     Literal,
     Union,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -233,7 +234,11 @@ class Form(html.Div):
         field_components: dict[str, Any] = {}
         for f in _fields:
             child = _build_field(
-                config_id, f, label_style, label_class_name, field_maker,
+                config_id,
+                f,
+                label_style,
+                label_class_name,
+                field_maker,
                 read_only=_read_only,
             )
             if f.spec and f.spec.visible:
@@ -286,7 +291,11 @@ class Form(html.Div):
         object.__setattr__(self, "_sections", _sections)
         object.__setattr__(self, "_read_only", _read_only)
         object.__setattr__(self, "_layout", _layout)
-        object.__setattr__(self, "_field_components_type", _field_components if isinstance(_field_components, str) else None)
+        object.__setattr__(
+            self,
+            "_field_components_type",
+            _field_components if isinstance(_field_components, str) else None,
+        )
 
     @property
     def named_states(self) -> dict[str, State]:
@@ -1022,8 +1031,9 @@ class FnForm(Form):
         if _initial_values is not None:
             for f in fields:
                 if isinstance(_initial_values, dict):
-                    if f.name in _initial_values:
-                        f.default = _initial_values[f.name]
+                    _iv = cast("dict[str, Any]", _initial_values)
+                    if f.name in _iv:
+                        f.default = _iv[f.name]
                 elif hasattr(_initial_values, f.name):
                     f.default = getattr(_initial_values, f.name)
 
@@ -1369,7 +1379,11 @@ def _validate(f: _Field, value: Any) -> str | None:
         return None
     empty = value is None or value == ""
     if empty:
-        return "Required" if (not f.optional and (f.default is None or f.required)) else None
+        return (
+            "Required"
+            if (not f.optional and (f.default is None or f.required))
+            else None
+        )
     try:
         if f.type == "int":
             int(value)
@@ -1479,7 +1493,11 @@ def _build_field(
         )
         children: list = [label, component]
         if spec.description:
-            children.append(html.Small(spec.description, style={"color": "#666", "display": "block"}))
+            children.append(
+                html.Small(
+                    spec.description, style={"color": "#666", "display": "block"}
+                )
+            )
         return html.Div(children, style=wrapper_style or None)
 
     if spec.component is not None:

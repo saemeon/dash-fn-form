@@ -91,9 +91,7 @@ def _make_hashable(v: Any) -> Any:
     return v
 
 
-def _cached_caller(
-    fn: Callable, cfg: FnForm, maxsize: int
-) -> Callable[..., Any]:
+def _cached_caller(fn: Callable, cfg: FnForm, maxsize: int) -> Callable[..., Any]:
     """Return a wrapper around fn that memoises by the raw Dash values tuple."""
 
     @functools.lru_cache(maxsize=maxsize)

@@ -458,7 +458,9 @@ def test_annotated_field_and_bare_validator_merged():
     """Annotated[T, Field(label=...), validator] merges validator into spec."""
 
     def fn(
-        x: Annotated[float, Field(label="Speed"), lambda v: "Too big" if v > 100 else None] = 1.0,
+        x: Annotated[
+            float, Field(label="Speed"), lambda v: "Too big" if v > 100 else None
+        ] = 1.0,
     ):
         pass
 
@@ -508,7 +510,9 @@ def test_field_hook_as_kwarg():
     def fn(x: float = 1.0):
         pass
 
-    form = FnForm(f"_t_hook_kwarg_{id(fn)}", fn, x=ConstHook2(), _field_components="dcc")
+    form = FnForm(
+        f"_t_hook_kwarg_{id(fn)}", fn, x=ConstHook2(), _field_components="dcc"
+    )
     f = form._fields[0]
     assert f.spec is not None
     assert f.spec.hook is not None

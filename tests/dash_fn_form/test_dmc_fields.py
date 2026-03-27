@@ -383,4 +383,5 @@ def test_dict_with_default_serialized_as_json():
     form = _form_dmc(fn)
     result = _find(form, dmc.Textarea)
     import json
+
     assert json.loads(result.value) == {"key": "val"}

@@ -1,4 +1,5 @@
 """Tests for form sections."""
+
 from dash_fn_form import FnForm
 
 

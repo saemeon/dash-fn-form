@@ -383,7 +383,6 @@ def test_named_states_values_are_state_objects():
 
 
 def test_named_states_datetime_emits_two_keys():
-
     def fn(ts: datetime | None = None):
         pass
 
@@ -426,7 +425,7 @@ def test_invalid_outputs_no_errors():
 
     form = _form(fn)
     result = form.invalid_outputs({})
-    assert result[0] == ""          # no message
+    assert result[0] == ""  # no message
     assert result[1]["display"] == "none"
 
 
@@ -549,7 +548,6 @@ def test_named_to_values_basic():
 
 
 def test_named_to_values_datetime_emits_two_entries():
-
     def fn(ts: datetime | None = None):
         pass
 
@@ -649,7 +647,6 @@ def test_callable_shorthand_sets_validator():
 
 
 def test_component_shorthand():
-
     def fn(x: float = 1.0):
         pass
 
@@ -825,7 +822,12 @@ def test_build_kwargs_validated_form_level_validator():
     def cross_check(kw):
         return "x must be less than y" if kw["x"] >= kw["y"] else None
 
-    form = FnForm(f"_t_cross_{id(cross_check)}", fn, _validator=cross_check, _field_components="dcc")
+    form = FnForm(
+        f"_t_cross_{id(cross_check)}",
+        fn,
+        _validator=cross_check,
+        _field_components="dcc",
+    )
     _, errors = form.build_kwargs_validated((5.0, 3.0))
     assert "_form" in errors
 

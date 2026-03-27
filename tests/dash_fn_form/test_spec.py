@@ -199,7 +199,6 @@ def test_field_with_slider_creates_slider_widget():
 
 
 def test_field_persist_adds_store_to_form():
-
     def fn(x: float = 1.0):
         pass
 
