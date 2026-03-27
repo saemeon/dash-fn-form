@@ -144,6 +144,7 @@ class _Field:
     default: Any
     args: tuple = ()
     optional: bool = False
+    required: bool = False  # True when no user-provided default; None input is an error
     spec: Field | None = field(default=None, repr=False)
     # spec is None until _resolve_spec is called in Config.__init__
 
@@ -1263,7 +1264,9 @@ def _get_fields(
         # Provide a sensible zero-value default when no default was given.
         # Matches ipywidgets: `def fn(x: int): ...` creates a number input
         # starting at 0 rather than requiring `def fn(x: int = 0): ...`.
-        if not has_default and raw_default is None and not optional:
+        # `required=True` is kept so validation still rejects None submissions.
+        required = not has_default and raw_default is None and not optional
+        if required:
             raw_default = _zero_default(field_type)
 
         fields.append(
@@ -1273,6 +1276,7 @@ def _get_fields(
                 default=raw_default,
                 args=args,
                 optional=optional,
+                required=required,
                 spec=annotated_spec,  # None → resolved later in Config.__init__
             )
         )
@@ -1357,7 +1361,7 @@ def _validate(f: _Field, value: Any) -> str | None:
         return None
     empty = value is None or value == ""
     if empty:
-        return "Required" if (not f.optional and f.default is None) else None
+        return "Required" if (not f.optional and (f.default is None or f.required)) else None
     try:
         if f.type == "int":
             int(value)
