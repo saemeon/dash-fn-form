@@ -20,7 +20,9 @@ def _caller_name(skip_modules: set[str]) -> str:
 def _in_jupyter() -> bool:
     """Return True when running inside a Jupyter kernel."""
     try:
-        from IPython import get_ipython  # noqa: PLC0415
+        from IPython import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+            get_ipython,  # noqa: PLC0415
+        )
 
         return get_ipython().__class__.__name__ == "ZMQInteractiveShell"
     except (ImportError, AttributeError):

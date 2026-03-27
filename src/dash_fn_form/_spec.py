@@ -209,7 +209,7 @@ class Field:
     """
 
     # --- interactivity ---
-    visible: tuple | None = None
+    visible: tuple[str, str, Any] | None = None
     """Conditional visibility rule: ``("other_field", "==", value)``."""
 
     # --- validation ---

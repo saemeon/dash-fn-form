@@ -339,7 +339,7 @@ def make_dmc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
                 id=fid,
                 min=spec.min,
                 max=spec.max,
-                step=slider_step,
+                step=slider_step,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
                 value=f.default if f.default is not None else spec.min,
                 style=spec.style,
                 className=spec.class_name,
@@ -353,7 +353,7 @@ def make_dmc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         return dmc.NumberInput(
             id=fid,
             value=f.default if f.default is not None else zero_dmc,
-            step=step,
+            step=step,  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
             style=spec.style,
             className=spec.class_name,
             **bounds_dmc,

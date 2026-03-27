@@ -350,9 +350,16 @@ class Form(html.Div):
 
         No arguments needed — call once after constructing the :class:`Config`.
         """
-        visible_fields = [f for f in self._fields if f.spec and f.spec.visible]
-        if not visible_fields:
+        # Collect (field, visible-condition) pairs — both guaranteed non-None
+        visible_with_cond = [
+            (f, f.spec.visible)
+            for f in self._fields
+            if f.spec is not None and f.spec.visible is not None
+        ]
+        if not visible_with_cond:
             return
+
+        visible_fields = [f for f, _ in visible_with_cond]
 
         # Map each field name to its index in self.states (datetime uses two)
         field_to_idx: dict[str, int] = {}
@@ -368,11 +375,11 @@ class Form(html.Div):
         ]
         conditions = [
             {
-                "idx": field_to_idx.get(f.spec.visible[0], 0),  # type: ignore[index]
-                "op": f.spec.visible[1],  # type: ignore[index]
-                "val": f.spec.visible[2],  # type: ignore[index]
+                "idx": field_to_idx.get(visible[0], 0),
+                "op": visible[1],
+                "val": visible[2],
             }
-            for f in visible_fields
+            for _, visible in visible_with_cond
         ]
         conditions_js = json.dumps(conditions)
 
@@ -742,7 +749,8 @@ class Form(html.Div):
         seen: set[tuple] = set()
         hook_states: list[State] = []
         for f in hooked:
-            for s in f.spec.hook.required_states():  # type: ignore[union-attr]
+            assert f.spec is not None and f.spec.hook is not None
+            for s in f.spec.hook.required_states():
                 key = (s.component_id, s.component_property)
                 if key not in seen:
                     seen.add(key)
@@ -954,7 +962,7 @@ class FnForm(Form):
         _show_docstring: bool = True,
         _exclude: list[str] | None = None,
         _include: list[str] | None = None,
-        _initial_values: dict | object | None = None,
+        _initial_values: dict[str, Any] | object | None = None,
         _validator: Callable[[dict], str | None] | None = None,
         _field_components: Any = None,
         _replace: bool = False,
@@ -1015,7 +1023,7 @@ class FnForm(Form):
             for f in fields:
                 if isinstance(_initial_values, dict):
                     if f.name in _initial_values:
-                        f.default = _initial_values[f.name]  # type: ignore[index]
+                        f.default = _initial_values[f.name]
                 elif hasattr(_initial_values, f.name):
                     f.default = getattr(_initial_values, f.name)
 
