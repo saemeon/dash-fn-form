@@ -1039,6 +1039,10 @@ class FnForm(Form):
 
         for f in fields:
             f.spec = _resolve_spec(f, external_specs, styles, class_names)
+            # Field.default takes precedence over the function signature default,
+            # allowing callers to override defaults without changing the function.
+            if f.spec is not None and f.spec.default is not None:
+                f.default = f.spec.default
 
         description = inspect.getdoc(fn) if _show_docstring else None
 

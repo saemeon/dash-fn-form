@@ -110,13 +110,20 @@ class Field:
     default: Any = None
     """Default value for the field.
 
-    Used in :class:`~dash_interact.Form` declarative subclasses::
+    When set, takes precedence over the callable's own parameter default.
+    This allows reusing existing functions while overriding their defaults
+    via ``field_specs`` — analogous to ``functools.partial``::
+
+        capture_graph(
+            graph,
+            renderer=my_renderer,               # has title: str = ""
+            field_specs={"title": Field(default="Q4 Results")},  # wins
+        )
+
+    Also used in :class:`~dash_interact.Form` declarative subclasses::
 
         class MyForm(Form):
             dpi: int = Field(min=72, max=300, default=150)
-
-    Ignored when the field is defined via a typed callable (the callable's
-    parameter default takes precedence).
     """
 
     # --- label / help ---
