@@ -116,7 +116,7 @@ def to_component(result: Any, renderer: Callable[[Any], Any] | None) -> Any:
         return dcc.Markdown(result)
 
     # Built-in: scalar → plain text
-    if isinstance(result, (int, float, bool)):
+    if isinstance(result, int | float | bool):
         return html.P(str(result))
 
     # Built-in: pandas DataFrame → DataTable or html.Table
@@ -180,7 +180,7 @@ def _dict_to_component(d: dict, renderer: Callable[[Any], Any] | None) -> html.D
         content = to_component(val, renderer)
         label = html.Span(str(key), style=_label_style)
         # scalars: single inline row — "key  value"
-        if isinstance(content, (html.P, dcc.Markdown)) or content is None:
+        if isinstance(content, html.P | dcc.Markdown) or content is None:
             rows.append(
                 html.Div(
                     [label, content],

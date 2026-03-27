@@ -989,7 +989,7 @@ class FnForm(Form):
             if isinstance(val, _FieldFixed):
                 fixed_values[name] = val.value
                 continue
-            if isinstance(val, (Field, FieldHook)):
+            if isinstance(val, Field | FieldHook):
                 normalized[name] = val
             elif isinstance(val, range):
                 normalized[name] = Field(min=val.start, max=val.stop, step=val.step)

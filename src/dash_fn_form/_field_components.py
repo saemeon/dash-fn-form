@@ -175,7 +175,7 @@ def make_dcc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         if spec.widget == "slider" and spec.min is not None and spec.max is not None:
             slider_step: int | float = (
                 spec.step
-                if isinstance(spec.step, (int, float))
+                if isinstance(spec.step, int | float)
                 else (1 if f.type == "int" else 0.1)
             )
             slider = dcc.Slider(
@@ -466,7 +466,7 @@ def make_dbc_field(config_id: str, f: Any, spec: Field, fid: str) -> Any:
         if spec.widget == "slider" and spec.min is not None and spec.max is not None:
             slider_step: int | float = (
                 spec.step
-                if isinstance(spec.step, (int, float))
+                if isinstance(spec.step, int | float)
                 else (1 if f.type == "int" else 0.1)
             )
             slider = dcc.Slider(
