@@ -43,7 +43,9 @@ def test_auto_panel_updates_on_input_change(dash_duo):
         return f"val={x * 3}"
 
     app = dash.Dash(__name__)
-    panel = build_fn_panel(triple, _id="triple_test", _loading=False, _field_components="dcc")
+    panel = build_fn_panel(
+        triple, _id="triple_test", _loading=False, _field_components="dcc"
+    )
     app.layout = html.Div([panel])
 
     dash_duo.start_server(app)
