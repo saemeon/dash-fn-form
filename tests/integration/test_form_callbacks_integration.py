@@ -15,10 +15,9 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 import dash
-import pytest
 from dash import Input, html
-from dash_fn_form import Field, FnForm, build_fn_panel
 
+from dash_fn_form import Field, FnForm, build_fn_panel
 
 # ── visibility callbacks (clientside JS) ─────────────────────────────────────
 

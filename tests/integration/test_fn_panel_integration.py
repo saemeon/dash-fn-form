@@ -11,10 +11,9 @@ Covers the callback bodies that cannot be reached in unit tests:
 from __future__ import annotations
 
 import dash
-import pytest
 from dash import html
-from dash_fn_form import build_fn_panel
 
+from dash_fn_form import build_fn_panel
 
 # ── auto-update panel (_on_change callback) ──────────────────────────────────
 
