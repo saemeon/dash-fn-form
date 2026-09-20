@@ -1,0 +1,16 @@
+# Written by copier, committed with the package: it is what `copier update`
+# reads to know which template, which version, and which answers. Edit the
+# answers here and run `copier update` rather than re-rendering by hand.
+_commit: e7bba0c
+_src_path: gh:saemeon/pytemplate
+author_email: s.niederberger@hotmail.com
+author_name: Simon Niederberger
+description: Introspection-based UI engine for Plotly Dash — transform type-hinted
+    Python functions into reactive Dash forms.
+github_user: saemeon
+keywords: ''
+license: MIT
+module_name: dash_fn_form
+package_name: dash-fn-form
+python_min: '3.10'
+use_docs: true
